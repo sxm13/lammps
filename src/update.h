@@ -48,11 +48,14 @@ class Update : protected Pointers {
 
   int rng_style;                  // default style for pRNGs
   int rng_seed;                   // global seed for pRNGs
+  class Random *rng;              // global pRNG for automatic seeds
 
   Update(class LAMMPS *);
   ~Update();
   void init();
   void set_units(const char *);
+  void set_random(int, char **);
+  int get_rng_seed();
   void create_integrate(int, char **, int);
   void create_minimize(int, char **);
   void reset_timestep(int, char **);

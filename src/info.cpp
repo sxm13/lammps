@@ -37,6 +37,7 @@
 #include "universe.h"
 #include "variable.h"
 #include "update.h"
+#include "random.h"
 #include "error.h"
 
 #include <time.h>
@@ -169,10 +170,20 @@ void Info::command(int narg, char **arg)
 
     fprintf(out,"\nLAMMPS version: %s / %s\n",
             universe->version, universe->num_ver);
-    fprintf(out,"sizeof(smallint): %3d-bit\n",(int)sizeof(smallint)*8);
-    fprintf(out,"sizeof(imageint): %3d-bit\n",(int)sizeof(imageint)*8);
-    fprintf(out,"sizeof(tagint):   %3d-bit\n",(int)sizeof(tagint)*8);
-    fprintf(out,"sizeof(bigint):   %3d-bit\n",(int)sizeof(bigint)*8);
+    fprintf(out," sizeof(smallint): %3d-bit\n"
+                " sizeof(imageint): %3d-bit\n"
+                " sizeof(tagint):   %3d-bit\n"
+                " sizeof(bigint):   %3d-bit\n",
+                (int)sizeof(smallint)*8,(int)sizeof(imageint)*8,
+                (int)sizeof(tagint)*8,  (int)sizeof(bigint)*8);
+
+    fprintf(out,"\nDefault random number generator settings:\n"
+            " random number generator style: %s\n"
+            " gaussian distribution method:  %s\n"
+            " equal seeds on all MPI ranks:  %s\n",
+            update->rng->rng2name(update->rng_style & Random::RNG_MASK),
+            update->rng->rng2name(update->rng_style & Random::RNG_GAUSS),
+            (update->rng_style & Random::RNG_EQUAL) ? "yes" : "no");
 
 #if defined(_WIN32)
     DWORD fullversion,majorv,minorv,buildv=0;

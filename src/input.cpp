@@ -678,6 +678,7 @@ int Input::execute_command()
   else if (!strcmp(command,"pair_style")) pair_style();
   else if (!strcmp(command,"pair_write")) pair_write();
   else if (!strcmp(command,"processors")) processors();
+  else if (!strcmp(command,"random")) random();
   else if (!strcmp(command,"region")) region();
   else if (!strcmp(command,"reset_timestep")) reset_timestep();
   else if (!strcmp(command,"restart")) restart();
@@ -1688,6 +1689,13 @@ void Input::processors()
   if (domain->box_exist)
     error->all(FLERR,"Processors command after simulation box is defined");
   comm->set_processors(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::random()
+{
+  update->set_random(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */

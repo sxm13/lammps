@@ -120,6 +120,7 @@ class Input : protected Pointers {
   void pair_style();
   void pair_write();
   void processors();
+  void random();
   void region();
   void reset_timestep();
   void restart();

@@ -27,6 +27,7 @@
 #include "region.h"
 #include "compute.h"
 #include "output.h"
+#include "random.h"
 #include "memory.h"
 #include "error.h"
 
@@ -55,6 +56,10 @@ Update::Update(LAMMPS *lmp) : Pointers(lmp)
 
   unit_style = NULL;
   set_units("lj");
+
+  rng_style = Random::RNG_PCG|Random::RNG_ZIGG;
+  rng_seed = 19660405;
+  rng = new Random(lmp,rng_seed,rng_style);
 
   integrate_style = NULL;
   integrate = NULL;
@@ -468,6 +473,64 @@ void Update::reset_timestep(bigint newstep)
   //for (int i = 0; i < domain->nregion; i++)
   //  if (domain->regions[i]->dynamic_check())
   //    error->all(FLERR,"Cannot reset timestep with a dynamic region defined");
+}
+
+/* ----------------------------------------------------------------------
+   set pRNG options
+------------------------------------------------------------------------- */
+
+void Update::set_random(int narg, char **arg)
+{
+  // "random reset" resets the global master pRNG
+  // no other flags are allowed with this one.
+  if (narg == 1) {
+    if (strcmp(arg[0],"reset") == 0) {
+      delete rng;
+      rng = NULL;
+      rng = new Random(lmp,rng_seed);
+    } else error->all(FLERR,"Illegal random command");
+    return;
+  }
+
+  // otherwise we always have to have key/value pairs
+  if (narg & 1) error->all(FLERR,"Illegal random command");
+
+  for (int i=0; i < narg; i +=2) {
+    if (strcmp(arg[i],"style") == 0) {
+      rng_style &= ~Random::RNG_MASK;
+      rng_style |= rng->name2rng(arg[i+1]);
+      if ((rng_style & Random::RNG_MASK) == 0)
+        error->all(FLERR,"Unknown random number generator style");
+    } else if (strcmp(arg[i],"seed") == 0) {
+      rng_seed = force->inumeric(FLERR,arg[i+1]);
+      if (rng_seed <= 0)
+        error->all(FLERR,"Illegal global random number generator seed");
+    } else if (strcmp(arg[i],"gauss") == 0) {
+      rng_style &= ~Random::RNG_GAUSS;
+      rng_style |= rng->name2rng(arg[i+1]);
+      if ((rng_style & Random::RNG_GAUSS) == 0)
+        error->all(FLERR,"Unknown gaussian distribution method");
+    } else if (strcmp(arg[i],"equal") == 0) {
+      if (strcmp(arg[i+1],"yes") == 0)
+        rng_style |= ~Random::RNG_EQUAL;
+      else if (strcmp(arg[i+1],"no") == 0)
+        rng_style &= ~Random::RNG_EQUAL;
+      else error->all(FLERR,"Unknown random equal option");
+    } else if (strcmp(arg[i],"read") == 0) {
+      rng->read_state(arg[i+1]);
+    } else if (strcmp(arg[i],"write") == 0) {
+      rng->write_state(arg[i+1]);
+    } else error->all(FLERR,"Illegal random command");
+  }
+}
+
+/* ----------------------------------------------------------------------
+   query global random number generator for automatic rng seed.
+------------------------------------------------------------------------- */
+
+int Update::get_rng_seed()
+{
+  return rng->uniform() * 256.0*256.0*256.0*128.0;
 }
 
 /* ----------------------------------------------------------------------
