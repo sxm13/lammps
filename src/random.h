@@ -36,21 +36,23 @@ class Random : protected Pointers {
     else return gauss_polar();
   };
 
-  unsigned long bits();   // only used by TestU01
-
   void init(int);
   void init(int, double *);
 
   int get_state(char **); // give access to pRNG state array and return length
   int set_state(char *);  // initialize pRNG from given state
+  void read_state(const char *);  // read pRNG state from file
+  void write_state(const char *); // write pRNG state to file
 
   enum {RNG_EQUAL=1<<0, // pRNG is initialized equally across all parallel tasks
         RNG_ZIGG =1<<1, // gaussian RNGs via ziggurat instead of marsaglia polar
         RNG_POLAR=1<<2, // gaussian RNGs via marsaglia polar instead of ziggurat
+        RNG_GAUSS=(RNG_ZIGG|RNG_POLAR), // combined bits for gauss dist flags
         RNG_PARK=1<<3,  // Park/Miller pRNG (not recommanded)
         RNG_MARS=1<<4,  // RANMAR in F James, Comp Phys Comm, 60, 329 (1990)
         RNG_PCG=1<<5 ,  // very fast pRNG from http://www.pcg-random.org/
         RNG_MT=1<<6,    // portable Mersenne Twister MT19937 pRNG
+        RNG_MASK=(RNG_PARK|RNG_MARS|RNG_PCG|RNG_MT), // combined bits for pRNGs
         RNG_LAST=1<<7 };
 
   const char *rng2name(int) const;  // return name indicating pRNG by constant

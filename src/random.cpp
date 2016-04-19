@@ -53,57 +53,51 @@ using namespace LAMMPS_NS;
 /* common constants */
 
 static const int zigg_layers = 256;
-static const double ran_uint32_scale = 1.0 / (256.0*256.0*256.0*256.0);
+static const double rng_uint32_scale = 1.0 / (256.0*256.0*256.0*256.0);
 
 // keyword names. must be in sync with enumerator in header.
-static const char * const ran_names[] = {
-    "(unknown)", "equal", "ziggurat", "polar",
+static const char * const rng_names[] = {
+    "(unknown)", "ziggurat", "polar",
     "park", "mars", "pcg", "mt", "" };
 
 /* common elements of all pRNG data structs */
 
-typedef struct {
-  int style;
-  int save;
-  double second;
-  double xlayers[zigg_layers];
-  double ylayers[zigg_layers];
-} ran_any_t;
+#define RNG_COMMON_VARS        \
+  int style;                   \
+  int save;                    \
+  double second;               \
+  double xlayers[zigg_layers]; \
+  double ylayers[zigg_layers]
 
+typedef struct {
+  RNG_COMMON_VARS;
+} rng_any_t;
 
 /* ---------------------------------------------------------------------- */
 
 /* marsaglia pRNG after RANMAR in F James, Comp Phys Comm, 60, 329 (1990) */
 
 typedef struct {
-  int style;
-  int save;
-  double second;
-  double xlayers[zigg_layers];
-  double ylayers[zigg_layers];
+  RNG_COMMON_VARS;
   int i97,j97;
   double c,cd,cm;
   double u[97+1];
-} ran_mars_t;
+} rng_mars_t;
 
-static void ran_mars_init(int seed, void *ptr);
-static double ran_mars_uniform(void *ptr);
+static void rng_mars_init(int seed, void *ptr);
+static double rng_mars_uniform(void *ptr);
 
 /* ---------------------------------------------------------------------- */
 
 /* Park/Miller pRNG. Do not use. Only provided for backward compatibility.  */
 
 typedef struct {
-  int style;
-  int save;
-  double second;
-  double xlayers[zigg_layers];
-  double ylayers[zigg_layers];
+  RNG_COMMON_VARS;
   int seed;
-} ran_park_t;
+} rng_park_t;
 
-static void ran_park_init(int seed, void *ptr);
-static double ran_park_uniform(void *ptr);
+static void rng_park_init(int seed, void *ptr);
+static double rng_park_uniform(void *ptr);
 
 /* ----------------------------------------------------------------------
    PCG random number generator
@@ -119,17 +113,13 @@ static double ran_park_uniform(void *ptr);
 ------------------------------------------------------------------------ */
 
 typedef struct {
-  int style;
-  int save;
-  double second;
-  double xlayers[zigg_layers];
-  double ylayers[zigg_layers];
+  RNG_COMMON_VARS;
   uint64_t state;
   uint64_t inc;
-} ran_pcg_t;
+} rng_pcg_t;
 
-static void ran_pcg_init(int seed, int stream, void *ptr);
-static double ran_pcg_uniform(void *ptr);
+static void rng_pcg_init(int seed, int stream, void *ptr);
+static double rng_pcg_uniform(void *ptr);
 
 /* ---------------------------------------------------------------------- */
 
@@ -144,17 +134,13 @@ static double ran_pcg_uniform(void *ptr);
 
 static const int MT_N = 624;
 typedef struct {
-  int style;
-  int save;
-  double second;
-  double xlayers[zigg_layers];
-  double ylayers[zigg_layers];
+  RNG_COMMON_VARS;
   int idx;
   uint32_t m[MT_N];
-} ran_mt_t;
+} rng_mt_t;
 
-static void ran_mt_init(int seed, void *ptr);
-static double ran_mt_uniform(void *ptr);
+static void rng_mt_init(int seed, void *ptr);
+static double rng_mt_uniform(void *ptr);
 
 /* ---------------------------------------------------------------------- */
 
@@ -162,6 +148,10 @@ Random::Random(LAMMPS *lmp, int seed) : Pointers(lmp)
 {
   _uniform = 0;
   rng_style = update->rng_style;
+  if (seed == 0) {
+    if (update) seed = update->get_rng_seed();
+    else seed = MPI_Wtime();
+  }
   setup_rng(seed);
 }
 
@@ -191,25 +181,30 @@ void Random::setup_rng(int seed)
 {
   int tmp_seed = seed;
 
-  if (seed == 0) tmp_seed = update->rng_seed;
-  if (seed < 0) error->one(FLERR,"Invalid seed for random number generator");
+  if (seed == 0) {
+    // update will never create its own rng with seed 0,
+    // but this is simple and safe.
+    if (update && update->rng) seed = update->get_rng_seed();
+    else seed = MPI_Wtime();
+  } else if (seed < 0)
+    error->one(FLERR,"Invalid seed for random number generator");
 
   if (rng_style & RNG_PARK) {
-    _uniform = &ran_park_uniform;
-    state = new ran_park_t;
-    nbytes = sizeof(ran_park_t);
+    _uniform = &rng_park_uniform;
+    state = new rng_park_t;
+    nbytes = sizeof(rng_park_t);
   } else if (rng_style & RNG_MARS) {
-    _uniform = &ran_mars_uniform;
-    state = new ran_mars_t;
-    nbytes = sizeof(ran_mars_t);
+    _uniform = &rng_mars_uniform;
+    state = new rng_mars_t;
+    nbytes = sizeof(rng_mars_t);
   } else if (rng_style & RNG_PCG) {
-    _uniform = &ran_pcg_uniform;
-    state = new ran_pcg_t;
-    nbytes = sizeof(ran_pcg_t);
+    _uniform = &rng_pcg_uniform;
+    state = new rng_pcg_t;
+    nbytes = sizeof(rng_pcg_t);
   } else if (rng_style & RNG_MT) {
-    _uniform = &ran_mt_uniform;
-    state = new ran_mt_t;
-    nbytes = sizeof(ran_mt_t);
+    _uniform = &rng_mt_uniform;
+    state = new rng_mt_t;
+    nbytes = sizeof(rng_mt_t);
   } else error->one(FLERR,"Unsupported pRNG style");
 
   // the first bytes of the state struct is the rng_style setting
@@ -220,7 +215,7 @@ void Random::setup_rng(int seed)
   else init(tmp_seed + comm->me);
 
   // preparation for gaussian distributed random numbers
-  ran_any_t &rng = *static_cast<ran_any_t *>(state);
+  rng_any_t &rng = *static_cast<rng_any_t *>(state);
   const double xn = 3.6541528853610088;
   const double A  = 0.00492867323399;
 
@@ -244,16 +239,16 @@ void Random::setup_rng(int seed)
 void Random::init(int seed)
 {
   if (rng_style & RNG_PARK) {
-    ran_park_init(seed,state);
+    rng_park_init(seed,state);
   } else if (rng_style & RNG_MARS) {
-    ran_mars_init(seed,state);
+    rng_mars_init(seed,state);
   } else if (rng_style & RNG_PCG) {
     int stream;
     if (rng_style & RNG_EQUAL) stream = 0;
     else stream = comm->me;
-    ran_pcg_init(seed,stream,state);
+    rng_pcg_init(seed,stream,state);
   } else if (rng_style & RNG_MT) {
-    ran_mt_init(seed,state);
+    rng_mt_init(seed,state);
   } else error->one(FLERR,"Unsupported pRNG style");
 }
 
@@ -307,16 +302,16 @@ void Random::init(int seed, double *coord)
 void Random::clear_rng()
 {
   if (rng_style & RNG_PARK) {
-    ran_park_t *tmp = static_cast<ran_park_t *>(state);
+    rng_park_t *tmp = static_cast<rng_park_t *>(state);
     delete tmp;
   } else if (rng_style & RNG_MARS) {
-    ran_mars_t *tmp = static_cast<ran_mars_t *>(state);
+    rng_mars_t *tmp = static_cast<rng_mars_t *>(state);
     delete tmp;
   } else if (rng_style & RNG_PCG) {
-    ran_pcg_t *tmp = static_cast<ran_pcg_t *>(state);
+    rng_pcg_t *tmp = static_cast<rng_pcg_t *>(state);
     delete tmp;
   } else if (rng_style & RNG_MT) {
-    ran_mt_t *tmp = static_cast<ran_mt_t *>(state);
+    rng_mt_t *tmp = static_cast<rng_mt_t *>(state);
     delete tmp;
   }
 }
@@ -326,17 +321,17 @@ void Random::clear_rng()
 // convert rng flag to option name
 const char *Random::rng2name(int flag) const
 {
-    for (int i = 0; 1<<i < RNG_LAST; ++i) {
-        if (1<<i == flag) return ran_names[i];
+    for (int i = 1; 1<<i < RNG_LAST; ++i) {
+        if (1<<i & flag) return rng_names[i];
     }
-    return ran_names[0];
+    return rng_names[0];
 }
 
 // convert option name to rng flag
 int Random::name2rng(const char *option) const
 {
-    for (int i = 0; 1<<i < RNG_LAST; ++i) {
-        if (strcmp(option,ran_names[i]) == 0) return 1<<i;
+    for (int i = 1; 1<<i < RNG_LAST; ++i) {
+        if (strcmp(option,rng_names[i]) == 0) return 1<<i;
     }
     return 0;
 }
@@ -355,12 +350,22 @@ int Random::get_state(char **ptr)
 int Random::set_state(char *ptr)
 {
     if (ptr == 0) return 0;
-    ran_any_t &rng = *(ran_any_t *)ptr;
+    rng_any_t &rng = *(rng_any_t *)ptr;
     clear_rng();
     rng_style = rng.style;
     setup_rng(0);
     memcpy(state,ptr,nbytes);
     return 1;
+}
+
+// read status of pRNG in parallel from file
+void Random::read_state(const char *file)
+{
+}
+
+// write status of pRNG in parallel to file
+void Random::write_state(const char *file)
+{
 }
 
 /* -------------------------------------------------------------------------
@@ -369,7 +374,7 @@ int Random::set_state(char *ptr)
 
 double Random::gauss_polar()
 {
-  ran_any_t &rng = *static_cast<ran_any_t *>(state);
+  rng_any_t &rng = *static_cast<rng_any_t *>(state);
   double first,v1,v2,rsq,fac;
 
   if (!rng.save) {
@@ -397,7 +402,7 @@ double Random::gauss_polar()
 
 double Random::gauss_zigg()
 {
-  ran_any_t &rng = *static_cast<ran_any_t *>(state);
+  rng_any_t &rng = *static_cast<rng_any_t *>(state);
   const double A  = 0.00492867323399;
   double x,y;
 
@@ -445,12 +450,12 @@ double Random::gauss_zigg()
 /* ---------------------------------------------------------------------- */
 /* ---------------------------------------------------------------------- */
 
-void ran_mars_init(int seed, void *ptr)
+void rng_mars_init(int seed, void *ptr)
 {
   int ij,kl,i,j,k,l,ii,jj,m;
   double s,t;
 
-  ran_mars_t &state = *static_cast<ran_mars_t *>(ptr);
+  rng_mars_t &state = *static_cast<rng_mars_t *>(ptr);
 
   // sanitize seed. assumes the calling code ensures it to be > 0
   seed %= 900000000;
@@ -480,12 +485,12 @@ void ran_mars_init(int seed, void *ptr)
   state.cm = 16777213.0 / 16777216.0;
   state.i97 = 97;
   state.j97 = 33;
-  ran_mars_uniform(ptr);
+  rng_mars_uniform(ptr);
 }
 
-double ran_mars_uniform(void *ptr)
+double rng_mars_uniform(void *ptr)
 {
-  ran_mars_t &state = *static_cast<ran_mars_t *>(ptr);
+  rng_mars_t &state = *static_cast<rng_mars_t *>(ptr);
   double uni = state.u[state.i97] - state.u[state.j97];
 
   if (uni < 0.0) uni += 1.0;
@@ -509,15 +514,15 @@ static const double AM = (1.0/IM);
 static const int IQ = 127773;
 static const int IR =  2836;
 
-void ran_park_init(int seed, void *ptr)
+void rng_park_init(int seed, void *ptr)
 {
-  ran_park_t &state = *static_cast<ran_park_t *>(ptr);
+  rng_park_t &state = *static_cast<rng_park_t *>(ptr);
   state.seed = seed;
 }
 
-double ran_park_uniform(void *ptr)
+double rng_park_uniform(void *ptr)
 {
-  ran_park_t &state = *static_cast<ran_park_t *>(ptr);
+  rng_park_t &state = *static_cast<rng_park_t *>(ptr);
   const int k = state.seed/IQ;
 
   state.seed = IA*(state.seed-k*IQ) - IR*k;
@@ -538,9 +543,9 @@ static inline uint32_t pcg_rotate32(uint32_t v, uint32_t r)
   return (v >> r) | (v << ((-r) & 31));
 }
 
-static uint32_t ran_pcg_uniformi(void *ptr)
+static uint32_t rng_pcg_uniformi(void *ptr)
 {
-  ran_pcg_t &state = *static_cast<ran_pcg_t *>(ptr);
+  rng_pcg_t &state = *static_cast<rng_pcg_t *>(ptr);
   uint64_t oldstate = state.state;
 
   // advance state, constant taken from implementation by Melissa O'Neill:
@@ -551,19 +556,19 @@ static uint32_t ran_pcg_uniformi(void *ptr)
   return pcg_rotate32((oldstate ^ (oldstate >> 18)) >> 27, oldstate >> 59);
 }
 
-void ran_pcg_init(int seed, int stream, void *ptr)
+void rng_pcg_init(int seed, int stream, void *ptr)
 {
-  ran_pcg_t &state = *static_cast<ran_pcg_t *>(ptr);
+  rng_pcg_t &state = *static_cast<rng_pcg_t *>(ptr);
   state.state = seed;
   state.inc = 2*stream + 1;
-  ran_pcg_uniformi(ptr);
+  rng_pcg_uniformi(ptr);
   state.state += seed;
-  ran_pcg_uniformi(ptr);
+  rng_pcg_uniformi(ptr);
 }
 
-double ran_pcg_uniform(void *ptr)
+double rng_pcg_uniform(void *ptr)
 {
-  return ran_uint32_scale * static_cast<double>(ran_pcg_uniformi(ptr));
+  return rng_uint32_scale * static_cast<double>(rng_pcg_uniformi(ptr));
 }
 
 /* ---------------------------------------------------------------------- */
@@ -578,9 +583,9 @@ static const uint32_t MT_A = 0x9908B0DFU;
 static const uint32_t MT_B = 0x9D2C5680U;
 static const uint32_t MT_C = 0xEFC60000U;
 
-static uint32_t ran_mt_randomize(void *ptr)
+static uint32_t rng_mt_randomize(void *ptr)
 {
-  ran_mt_t &state = *static_cast<ran_mt_t *>(ptr);
+  rng_mt_t &state = *static_cast<rng_mt_t *>(ptr);
   uint32_t r;
 
   if (state.idx >= MT_N) {
@@ -613,9 +618,9 @@ static uint32_t ran_mt_randomize(void *ptr)
   return r;
 }
 
-void ran_mt_init(int seed, void *ptr)
+void rng_mt_init(int seed, void *ptr)
 {
-  ran_mt_t &state = *static_cast<ran_mt_t *>(ptr);
+  rng_mt_t &state = *static_cast<rng_mt_t *>(ptr);
   const uint32_t f = 1812433253UL;
   int i;
 
@@ -626,11 +631,12 @@ void ran_mt_init(int seed, void *ptr)
     state.m[i] = (f * (state.m[i-1] ^ (state.m[i-1] >> 30)) + i);
 
   // to seed the RNG some more we need a second RNG
-  ran_mars_t *mars = new ran_mars_t;
-  ran_mars_init(seed,mars);
+  // TODO: XXX benchmark how switching to PCG affects performance
+  rng_mars_t *mars = new rng_mars_t;
+  rng_mars_init(seed,mars);
   for (i=0; i < MT_N-1; ++i) {
     state.m[i+1] = (state.m[i+1]^((state.m[i]^(state.m[i]>>30))*1664525UL))
-      + (uint32_t) (ran_mars_uniform(mars)* (1U<<31)) + i;
+      + (uint32_t) (rng_mars_uniform(mars)* (1U<<31)) + i;
   }
   state.m[0] = state.m[MT_N-1];
   delete mars;
@@ -643,11 +649,11 @@ void ran_mt_init(int seed, void *ptr)
 
   // randomize one more turn
   state.idx = 0;
-  for (i=0; i < MT_N-1; ++i) ran_mt_randomize(&state);
+  for (i=0; i < MT_N-1; ++i) rng_mt_randomize(&state);
 }
 
-double ran_mt_uniform(void *ptr)
+double rng_mt_uniform(void *ptr)
 {
-  return ran_uint32_scale * static_cast<double>(ran_mt_randomize(ptr));
+  return rng_uint32_scale * static_cast<double>(rng_mt_randomize(ptr));
 }
 
