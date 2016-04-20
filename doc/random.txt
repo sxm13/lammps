@@ -1,0 +1,87 @@
+"LAMMPS WWW Site"_lws - "LAMMPS Documentation"_ld - "LAMMPS Commands"_lc :c
+
+:link(lws,http://lammps.sandia.gov)
+:link(ld,Manual.html)
+:link(lc,Section_commands.html#comm)
+
+:line
+
+random command :h3
+
+[Syntax:]
+
+random keyword value ...
+random reset :pre
+
+zero or more keyword/value pairs may be used :ulb,l
+keyword = {style} or {seed} or {gauss} or {equal} or {read} or {write} :l
+  {style} value = {mt} or {mars} or {pcg} or {park}
+  {seed} value = random # seed (positive integer)
+  {gauss} value = {ziggurat} or {polar} 
+  {equal} value = {no} or {yes} 
+  {write} value = rng status save file
+  {read} value = rng status save file :pre
+:ule
+
+[Examples:]
+
+random style pcg gauss ziggurat equal no
+random style mt gauss polar
+random seed 152345
+random reset :pre
+
+[Description:]
+
+Set or change the default settings for random number generators.
+LAMMPS has one persistent global random number generator which
+is primarily used for obtaining {automatic} seeds for other
+random number generator instances. These settings are applied
+whenever a new random number generator instance is created,
+e.g. by the "velocity"_velocity.html command or by fixes like
+"fix langevin"_fix_langevin.html and so on. The global random
+number generator will be instantiated with default settings.
+
+The {style} keyword changes the setting for the random number
+generator algorithm. Available are {mt} (= Mersenne twister MT19937),
+{mars} (= Marsaglia), {pcg} (= Permuted congruential generator),
+and {park} (=Park/Miller). The various algorithms differ in
+speed and quality of the generated stream of random numbers.
+{pcg} and {mt} are very fast and of high quality, {mars} is the
+slowest, but has been carefully tested to produce different
+streams with similar seeds. {park} is mainly provided for backward
+compatibility.
+
+The {gauss} keyword changes the method to produce gaussian
+distributed random numbers. {polar} is the widely used Marsaglia
+polar method, {ziggurat} the more efficient, but also the more
+complex algorithm.
+
+The {equal} keyword changes whether random number generators
+should be seeded differently on different MPI ranks (= {no})
+or whether they should use identical seeds (= yes) and thus
+will produce identical streams of random numbers. Usually the
+{no} setting is preferable.
+
+The {write} keyword allows to write the sate of the persistent
+global random number generator to a file. If the {equal} setting
+for the active instance ([not] the current default setting)
+is {yes} then only the state for one processor is saved, otherwise
+the state from all processors are concatenated and written out.
+The resulting file has two lines of readable text and then the
+state buffers as unformatted binary data.
+
+The {read} keyword allows to read back a previously save state
+of the persistent global random number generator. Please note
+that this will ignore the current default settings and leave
+them untouched, but will restore the random number generator
+to the settings used to create this instance.
+
+The {reset} keyword recreates the global random number generator
+using the current default settings. The {seed} keyword allows to
+change the seed for operation. The seed must be a number larger
+than zero.
+
+[Default:]
+
+The keyword defaults are style = pcg, gauss = ziggurat,
+equal = no, seed = 19660405.
