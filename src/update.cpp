@@ -512,14 +512,14 @@ void Update::set_random(int narg, char **arg)
         error->all(FLERR,"Unknown gaussian distribution method");
     } else if (strcmp(arg[i],"equal") == 0) {
       if (strcmp(arg[i+1],"yes") == 0)
-        rng_style |= ~Random::RNG_EQUAL;
+        rng_style |= Random::RNG_EQUAL;
       else if (strcmp(arg[i+1],"no") == 0)
         rng_style &= ~Random::RNG_EQUAL;
       else error->all(FLERR,"Unknown random equal option");
     } else if (strcmp(arg[i],"read") == 0) {
-      rng->read_state(arg[i+1]);
+      rng->read_state(arg[i+1],1);
     } else if (strcmp(arg[i],"write") == 0) {
-      rng->write_state(arg[i+1]);
+      rng->write_state(arg[i+1],1);
     } else error->all(FLERR,"Illegal random command");
   }
 }
