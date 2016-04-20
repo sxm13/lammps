@@ -416,7 +416,7 @@ void Random::write_state(const char *file, int parallel)
   char *allbuf;
   const int equal = rng_style & RNG_EQUAL;
   const int nprocs = (parallel && !equal) ? comm->nprocs : 1;
-  const char *buf = (const char *)state;
+  char *buf = (char *)state;
 
   if (!parallel || (comm->me == 0)) {
     fp = fopen(file,"wb");
