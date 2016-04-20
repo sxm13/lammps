@@ -42,19 +42,24 @@ e.g. by the "velocity"_velocity.html command or by fixes like
 number generator will be instantiated with default settings.
 
 The {style} keyword changes the setting for the random number
-generator algorithm. Available are {mt} (= Mersenne twister MT19937),
-{mars} (= Marsaglia), {pcg} (= Permuted congruential generator),
-and {park} (=Park/Miller). The various algorithms differ in
-speed and quality of the generated stream of random numbers.
-{pcg} and {mt} are very fast and of high quality, {mars} is the
-slowest, but has been carefully tested to produce different
-streams with similar seeds. {park} is mainly provided for backward
-compatibility.
+generator algorithm. Currently available choices are:
+{mt}   (= Mersenne twister "(MT19937)"_#MT19937 ),
+{mars} (= RANMARS from "(James)"_#James ),
+{pcg}  (= Permuted congruential generator "(PCG)"_#PCG ),
+{park} (= Park-Miller "(Park)"_#Park ).
+The various algorithms differ in speed and quality of the
+generated stream of random numbers. {pcg} and {mt} are very fast
+and of high quality, {mars} is the slowest of the available choice,
+but is known to work well with, e.g. with the {equal} {no} setting
+with explicit seeds. {park} is mainly provided for backward
+compatibility, its main advantage is that it needs to time to
+be reinitialized.
 
 The {gauss} keyword changes the method to produce gaussian
 distributed random numbers. {polar} is the widely used Marsaglia
-polar method, {ziggurat} the more efficient, but also the more
-complex algorithm.
+polar method "(Marsaglia)"_#Marsaglia , and {ziggurat} the more
+efficient, but also the more complex algorithm "(Ziggurat)"_#Ziggurat
+from the same author.
 
 The {equal} keyword changes whether random number generators
 should be seeded differently on different MPI ranks (= {no})
@@ -85,3 +90,39 @@ than zero.
 
 The keyword defaults are style = pcg, gauss = ziggurat,
 equal = no, seed = 19660405.
+
+:line
+
+:dlb
+
+:link(MT19937)
+[(MT19937)] :dt
+
+Matsumoto, Nishimura, ACM Trans. Modeling and Comp. Simul., 8(1), 3-30. (1998) :dd
+
+:link(James)
+[(James)] :dt
+
+James, Comp Phys Comm , 60, 329, (1990) :dd
+
+:link(PCG)
+[(PCG)] :dt
+
+O'Neill, ACM Trans. Math. Softw., submitted 2015, "http://www.pcg-random.org/"_http://www.pcg-random.org/ :dd
+
+:link(Park)
+[(Park)] :dt
+
+Park, Miller, Communications to the ACM, 31(10), 1192-1201, (1988) :dd
+
+:link(Ziggurat)
+[(Ziggurat)] :dt
+
+Marsaglia, Tsang, Journal of Statistical Science 5(8), (2000) :dd
+
+:link(Marsaglia)
+[(Marsaglia)] :dt
+
+Marsaglia, Bray, SIAM Rev 6, 260-264, (1964) :dd
+
+:dle
