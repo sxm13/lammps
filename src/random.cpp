@@ -42,6 +42,7 @@
 
 #include <math.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "random.h"
 #include "update.h"
@@ -52,6 +53,7 @@ using namespace LAMMPS_NS;
 
 /* common constants */
 
+static const int rng_file_version = 1;
 static const int zigg_layers = 256;
 static const double rng_uint32_scale = 1.0 / (256.0*256.0*256.0*256.0);
 
@@ -146,7 +148,7 @@ static double rng_mt_uniform(void *ptr);
 
 Random::Random(LAMMPS *lmp, int seed) : Pointers(lmp)
 {
-  _uniform = 0;
+  _uniform = NULL;
   rng_style = update->rng_style;
   if (seed == 0) {
     if (update) seed = update->get_rng_seed();
@@ -159,7 +161,7 @@ Random::Random(LAMMPS *lmp, int seed) : Pointers(lmp)
 
 Random::Random(LAMMPS *lmp, int seed, int style) : Pointers(lmp)
 {
-  _uniform = 0;
+  _uniform = NULL;
   rng_style = style;
   setup_rng(seed);
 }
@@ -168,9 +170,9 @@ Random::Random(LAMMPS *lmp, int seed, int style) : Pointers(lmp)
 
 Random::~Random()
 {
-  _uniform = 0;
+  _uniform = NULL;
   clear_rng();
-  state = 0;
+  state = NULL;
 }
 
 /* ----------------------------------------------------------------------
@@ -339,7 +341,7 @@ int Random::name2rng(const char *option) const
 // make flags and state of current pRNG available
 int Random::get_state(char **ptr)
 {
-    if (ptr == 0) return 0;
+    if (ptr == NULL) return 0;
     *ptr = (char *) state;
     return nbytes;
 }
@@ -349,7 +351,7 @@ int Random::get_state(char **ptr)
 // and then copy the entire state over.
 int Random::set_state(char *ptr)
 {
-    if (ptr == 0) return 0;
+    if (ptr == NULL) return 0;
     rng_any_t &rng = *(rng_any_t *)ptr;
     clear_rng();
     rng_style = rng.style;
@@ -359,13 +361,87 @@ int Random::set_state(char *ptr)
 }
 
 // read status of pRNG in parallel from file
-void Random::read_state(const char *file)
+void Random::read_state(const char *file, int parallel)
 {
+  FILE *fp = NULL;
+  char *buf = new char[10240];
+  char *allbuf;
+  int version, equal, nprocs, savebytes;
+
+  if (!parallel || (comm->me == 0)) {
+    fp = fopen(file,"rb");
+    if (fp == NULL)
+      error->one(FLERR,"Failure to open rng save file");
+
+    allbuf = fgets(buf,10240,fp);
+    allbuf = fgets(buf,10240,fp);
+    sscanf(allbuf,"%d%d%d%d",&version,&nprocs,&equal,&savebytes);
+  }
+  if (parallel) {
+    MPI_Bcast(&version,1,MPI_INT,0,world);
+    MPI_Bcast(&nprocs,1,MPI_INT,0,world);
+    MPI_Bcast(&equal,1,MPI_INT,0,world);
+    MPI_Bcast(&savebytes,1,MPI_INT,0,world);
+  }
+  if (!parallel || (comm->me == 0)) {
+    allbuf = new char[savebytes*nprocs];
+    fread(allbuf,savebytes,nprocs,fp);
+  }
+  if (parallel) {
+    if (version != rng_file_version)
+      error->all(FLERR,"Incompatible rng state file");
+
+    if (equal) {
+      if (comm->me == 0) memcpy(buf,allbuf,savebytes);
+      MPI_Bcast(buf,savebytes,MPI_BYTE,0,world);
+    } else {
+      MPI_Scatter(allbuf,savebytes,MPI_BYTE,buf,savebytes,MPI_BYTE,0,world);
+    }
+  } else {
+    if (version != rng_file_version)
+      error->one(FLERR,"Incompatible rng state file");
+
+    memcpy(buf,allbuf,savebytes);
+  }
+  set_state(buf);
+
+  delete[] buf;
+  if (!parallel || (comm->me == 0)) delete[] allbuf;
 }
 
 // write status of pRNG in parallel to file
-void Random::write_state(const char *file)
+void Random::write_state(const char *file, int parallel)
 {
+  FILE *fp = NULL;
+  char *allbuf;
+  const int equal = rng_style & RNG_EQUAL;
+  const int nprocs = (parallel && !equal) ? comm->nprocs : 1;
+  const char *buf = (const char *)state;
+
+  if (!parallel || (comm->me == 0)) {
+    fp = fopen(file,"wb");
+    if (fp == NULL)
+      error->one(FLERR,"Failure to open rng save file");
+
+    fprintf(fp,"# version   nprocs equal  bytes rng\n"
+                "% 8d % 8d % 5d % 6d   %s\n",
+            rng_file_version, nprocs, equal, nbytes,
+            rng2name(rng_style & RNG_MASK));
+
+    if (parallel && !equal)
+      allbuf = new char[nbytes*nprocs];
+  }
+  if (parallel && !equal) {
+    MPI_Gather(buf,nbytes,MPI_BYTE,allbuf,nbytes,MPI_BYTE,0,world);
+    if (comm->me == 0) {
+      fwrite(allbuf,nbytes,nprocs,fp);
+      delete[] allbuf;
+    }
+  } else {
+    if (!parallel || comm->me == 0)
+      fwrite(buf,nbytes,1,fp);
+  }
+  if (!parallel || (comm->me == 0)) fclose(fp);
 }
 
 /* -------------------------------------------------------------------------

@@ -41,8 +41,8 @@ class Random : protected Pointers {
 
   int get_state(char **); // give access to pRNG state array and return length
   int set_state(char *);  // initialize pRNG from given state
-  void read_state(const char *);  // read pRNG state from file
-  void write_state(const char *); // write pRNG state to file
+  void read_state(const char *, int);  // read pRNG state from file
+  void write_state(const char *, int); // write pRNG state to file
 
   enum {RNG_EQUAL=1<<0, // pRNG is initialized equally across all parallel tasks
         RNG_ZIGG =1<<1, // gaussian RNGs via ziggurat instead of marsaglia polar
