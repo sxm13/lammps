@@ -365,7 +365,7 @@ void Random::read_state(const char *file, int parallel)
 {
   FILE *fp = NULL;
   char *buf = new char[10240];
-  char *allbuf;
+  char *allbuf = NULL;
   int version, equal, nprocs, savebytes;
 
   if (!parallel || (comm->me == 0)) {
@@ -413,7 +413,7 @@ void Random::read_state(const char *file, int parallel)
 void Random::write_state(const char *file, int parallel)
 {
   FILE *fp = NULL;
-  char *allbuf;
+  char *allbuf = NULL;
   const int equal = rng_style & RNG_EQUAL;
   const int nprocs = (parallel && !equal) ? comm->nprocs : 1;
   char *buf = (char *)state;
