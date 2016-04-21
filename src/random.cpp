@@ -144,6 +144,33 @@ typedef struct {
 static void rng_mt_init(int seed, void *ptr);
 static double rng_mt_uniform(void *ptr);
 
+/* ----------------------------------------------------------------------
+  C++ Saru PRNG by Steve Worley.   This is version 0.9, August 21 2008.
+
+  Saru is a 32 bit PRNG with period of 3666320093*2^32. It passes even
+  the most stringent randomness test batteries, including DIEHARD and
+  the much more comprehensive BigCrush battery. It is designed for
+  evaluation efficiency, a (relatively) compact state to allow fast
+  copying, and most notably the ability to very efficiently advance
+  (or rewind) its state. This advancement feature is useful for game
+  and graphics tools, and is especially attractive for multithreaded
+  and GPU applications.
+
+  The Saru generator is an original work and (deliberately)
+  unpatented. See the algorithm description at
+  worley.com/mathgeek/saru.html. Updates/fixes to this code (and a plain C
+  implementation) can be found there too.
+------------------------------------------------------------------------ */
+
+typedef struct {
+  RNG_COMMON_VARS;
+  unsigned int state;
+  unsigned int wstate;
+} rng_saru_t;
+
+static void rng_saru_init(unsigned int seed, unsigned int seed2, void *ptr);
+static double rng_saru_uniform(void *ptr);
+
 /* ---------------------------------------------------------------------- */
 
 Random::Random(LAMMPS *lmp, int seed) : Pointers(lmp)
@@ -207,6 +234,10 @@ void Random::setup_rng(int seed)
     _uniform = &rng_mt_uniform;
     state = new rng_mt_t;
     nbytes = sizeof(rng_mt_t);
+  } else if (rng_style & RNG_SARU) {
+    _uniform = &rng_saru_uniform;
+    state = new rng_saru_t;
+    nbytes = sizeof(rng_saru_t);
   } else error->one(FLERR,"Unsupported pRNG style");
 
   // the first bytes of the state struct is the rng_style setting
@@ -251,6 +282,11 @@ void Random::init(int seed)
     rng_pcg_init(seed,stream,state);
   } else if (rng_style & RNG_MT) {
     rng_mt_init(seed,state);
+  } else if (rng_style & RNG_SARU) {
+    int stream;
+    if (rng_style & RNG_EQUAL) stream = 0;
+    else stream = comm->me;
+    rng_saru_init(seed,stream,state);
   } else error->one(FLERR,"Unsupported pRNG style");
 }
 
@@ -314,6 +350,9 @@ void Random::clear_rng()
     delete tmp;
   } else if (rng_style & RNG_MT) {
     rng_mt_t *tmp = static_cast<rng_mt_t *>(state);
+    delete tmp;
+  } else if (rng_style & RNG_SARU) {
+    rng_saru_t *tmp = static_cast<rng_saru_t *>(state);
     delete tmp;
   }
 }
@@ -733,3 +772,36 @@ double rng_mt_uniform(void *ptr)
   return rng_uint32_scale * static_cast<double>(rng_mt_randomize(ptr));
 }
 
+/* ---------------------------------------------------------------------- */
+
+void rng_saru_init(unsigned int seed, unsigned int seed2, void *ptr)
+{
+  rng_saru_t &state = *static_cast<rng_saru_t *>(ptr);
+  unsigned int A = seed+(seed2<<21);
+  unsigned int B = seed2+(((signed int)A)>>16);
+
+  A  = A ^ (B>>10);
+  A  = 0x1fc4ce47*(A^(A>>13));
+  B = (B+0xcc00729f) ^ (A>>18);
+  A  = (A^B) + (B<<15);
+  B = (A+B) + (((signed int)A)>>27);
+  state.state  = A^(B<<3);
+  state.wstate = 0x856C4555+(B>>1);
+}
+
+static const unsigned int LCGA=0x4beb5d59; // Full period 32 bit LCG
+static const unsigned int LCGC=0x2600e1f7;
+static const unsigned int oWeylPeriod=0xda879add; // Prime period 3666320093
+static const unsigned int oWeylOffset=0x8009d14b;
+
+double rng_saru_uniform(void *ptr)
+{
+  rng_saru_t &rng = *static_cast<rng_saru_t *>(ptr);
+
+  rng.state=LCGA*rng.state+LCGC*(LCGA+1);
+  rng.wstate += oWeylOffset + ((((signed int)rng.wstate)>>31) & oWeylPeriod);
+  unsigned int v=(rng.state ^ (rng.state>>26))+rng.wstate;
+  unsigned int w = (v^(v>>20))*0x6957f5a7;
+
+  return rng_uint32_scale * static_cast<double>(w);
+}

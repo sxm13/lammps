@@ -24,7 +24,7 @@ class Random : protected Pointers {
   Random(class LAMMPS *, int, int); // constructor with seed and style
   virtual ~Random();
 
-  // return next uniformly distributed random number
+  // return next uniformly distributed random number between 0.0 and 1.0
   double uniform() {
     if (_uniform) return (*_uniform)(state);
     else return 0.0;
@@ -50,12 +50,14 @@ class Random : protected Pointers {
         RNG_GAUSS=(RNG_ZIGG|RNG_POLAR), // combined bits for gauss dist flags
         RNG_PARK=1<<3,  // Park/Miller pRNG (not recommanded)
         RNG_MARS=1<<4,  // RANMAR in F James, Comp Phys Comm, 60, 329 (1990)
-        RNG_PCG=1<<5 ,  // very fast pRNG from http://www.pcg-random.org/
+        RNG_PCG=1<<5 ,  // PCG, a fast pRNG from http://www.pcg-random.org/
         RNG_MT=1<<6,    // portable Mersenne Twister MT19937 pRNG
-        RNG_MASK=(RNG_PARK|RNG_MARS|RNG_PCG|RNG_MT), // combined bits for pRNGs
+        RNG_SARU=1<<7,  // SARU LCG RNG by S.P.Wolsky
+        // combined bits for all pRNGs
+        RNG_MASK=(RNG_PARK|RNG_MARS|RNG_PCG|RNG_MT|RNG_SARU),
         RNG_LAST=1<<7 };
 
-  const char *rng2name(int) const;  // return name indicating pRNG by constant
+  const char *rng2name(int) const;  // return name of pRNG from constant
   int name2rng(const char *) const; // find pRNG constant from name
 
  private:

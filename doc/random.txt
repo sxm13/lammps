@@ -15,7 +15,7 @@ random reset :pre
 
 zero or more keyword/value pairs may be used :ulb,l
 keyword = {style} or {seed} or {gauss} or {equal} or {read} or {write} :l
-  {style} value = {mt} or {mars} or {pcg} or {park}
+  {style} value = {mt} or {mars} or {pcg} or {saru} or {park}
   {seed} value = random # seed (positive integer)
   {gauss} value = {ziggurat} or {polar} 
   {equal} value = {no} or {yes} 
@@ -46,7 +46,8 @@ generator algorithm. Currently available choices are:
 {mt}   (= Mersenne twister "(MT19937)"_#MT19937 ),
 {mars} (= RANMARS from "(James)"_#James ),
 {pcg}  (= Permuted congruential generator "(PCG)"_#PCG ),
-{park} (= Park-Miller "(Park)"_#Park ).
+{saru} (= SARU 32-bit LCG pRNG "(Worley)"_#Worley),
+{park} (= Park-Miller pRNG "(Park)"_#Park ).
 The various algorithms differ in speed and quality of the
 generated stream of random numbers. {pcg} and {mt} are very fast
 and of high quality, {mars} is the slowest of the available choice,
@@ -109,6 +110,11 @@ James, Comp Phys Comm , 60, 329, (1990) :dd
 [(PCG)] :dt
 
 O'Neill, ACM Trans. Math. Softw., submitted 2015, "http://www.pcg-random.org/"_http://www.pcg-random.org/ :dd
+
+:link(Worley)
+[(Worley)] :dt
+
+Afshara, Schmidb, Pishevara, Worley, Comp Phys Comm, 184(4), 1119–1128 (2013)
 
 :link(Park)
 [(Park)] :dt
