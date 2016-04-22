@@ -35,7 +35,7 @@
 #include "fix_deform.h"
 #include "fix_wall_srd.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random.h"
 #include "math_const.h"
 #include "citeme.h"
 #include "memory.h"
@@ -208,7 +208,7 @@ FixSRD::FixSRD(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
     error->all(FLERR,"Could not find fix srd group ID");
   if (gridsrd <= 0.0) error->all(FLERR,"Illegal fix srd command");
   if (temperature_srd <= 0.0) error->all(FLERR,"Illegal fix srd command");
-  if (seed <= 0) error->all(FLERR,"Illegal fix srd command");
+  if (seed < 0) error->all(FLERR,"Illegal fix srd command");
   if (radfactor <= 0.0) error->all(FLERR,"Illegal fix srd command");
   if (maxbounceallow < 0) error->all(FLERR,"Illegal fix srd command");
   if (lamdaflag && lamda <= 0.0) error->all(FLERR,"Illegal fix srd command");
@@ -216,20 +216,21 @@ FixSRD::FixSRD(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
   if (cubictol < 0.0 || cubictol > 1.0)
     error->all(FLERR,"Illegal fix srd command");
   if ((shiftuser == SHIFT_YES || shiftuser == SHIFT_POSSIBLE) &&
-      shiftseed <= 0) error->all(FLERR,"Illegal fix srd command");
+      shiftseed < 0) error->all(FLERR,"Illegal fix srd command");
 
   // initialize Marsaglia RNG with processor-unique seed
 
   me = comm->me;
   nprocs = comm->nprocs;
 
-  random = new RanMars(lmp,seed + me);
+  random = new Random(lmp,seed);
 
   // if requested, initialize shift RNG, same on every proc
 
-  if (shiftuser == SHIFT_YES || shiftuser == SHIFT_POSSIBLE)
-    randomshift = new RanPark(lmp,shiftseed);
-  else randomshift = NULL;
+  if (shiftuser == SHIFT_YES || shiftuser == SHIFT_POSSIBLE) {
+    if (shiftseed == 0) update->get_rng_seed();
+    MPI_Bcast(&shiftseed,1,MPI_INT,0,world);
+    randomshift = new Random(lmp,shiftseed,update->rng_style|Random::RNG_EQUAL);  } else randomshift = NULL;
 
   // initialize data structs and flags
 

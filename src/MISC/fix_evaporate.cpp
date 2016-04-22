@@ -24,7 +24,7 @@
 #include "comm.h"
 #include "force.h"
 #include "group.h"
-#include "random_park.h"
+#include "random.h"
 #include "random_mars.h"
 #include "memory.h"
 #include "error.h"
@@ -55,11 +55,15 @@ FixEvaporate::FixEvaporate(LAMMPS *lmp, int narg, char **arg) :
     error->all(FLERR,"Illegal fix evaporate command");
   if (iregion == -1)
     error->all(FLERR,"Region ID for fix evaporate does not exist");
-  if (seed <= 0) error->all(FLERR,"Illegal fix evaporate command");
+  if (seed < 0) error->all(FLERR,"Illegal fix evaporate command");
+  if (seed == 0) {
+    update->get_rng_seed();
+    MPI_Bcast(&seed,1,MPI_INT,0,world);
+  }
 
   // random number generator, same for all procs
 
-  random = new RanPark(lmp,seed);
+  random = new Random(lmp,seed,update->rng_style|Random::RNG_EQUAL);
 
   // optional args
 

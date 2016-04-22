@@ -30,7 +30,7 @@
 #include "output.h"
 #include "thermo.h"
 #include "fix.h"
-#include "random_park.h"
+#include "random.h"
 #include "finish.h"
 #include "timer.h"
 #include "memory.h"
@@ -80,7 +80,10 @@ void Temper::command(int narg, char **arg)
     error->universe_all(FLERR,"Tempering fix ID is not defined");
 
   seed_swap = force->inumeric(FLERR,arg[4]);
+  if (seed_swap < 0) error->universe_all(FLERR,"Illegal random # seed");
   seed_boltz = force->inumeric(FLERR,arg[5]);
+  if (seed_boltz < 0) error->universe_all(FLERR,"Illegal random # seed");
+  if (seed_boltz == 0) update->get_rng_seed();
 
   my_set_temp = universe->iworld;
   if (narg == 7) my_set_temp = force->inumeric(FLERR,arg[6]);
@@ -163,9 +166,9 @@ void Temper::command(int narg, char **arg)
   // RNGs for swaps and Boltzmann test
   // warm up Boltzmann RNG
 
-  if (seed_swap) ranswap = new RanPark(lmp,seed_swap);
+  if (seed_swap) ranswap = new Random(lmp,seed_swap);
   else ranswap = NULL;
-  ranboltz = new RanPark(lmp,seed_boltz + me_universe);
+  ranboltz = new Random(lmp,seed_boltz + me_universe);
   for (int i = 0; i < 100; i++) ranboltz->uniform();
 
   // world2root[i] = global proc that is root proc of world i

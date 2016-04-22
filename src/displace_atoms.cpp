@@ -23,8 +23,9 @@
 #include "irregular.h"
 #include "group.h"
 #include "math_const.h"
-#include "random_park.h"
+#include "random.h"
 #include "force.h"
+#include "update.h"
 #include "input.h"
 #include "variable.h"
 #include "atom_vec_ellipsoid.h"
@@ -172,13 +173,17 @@ void DisplaceAtoms::command(int narg, char **arg)
   // makes atom result independent of what proc owns it via random->reset()
 
   if (style == RANDOM) {
-    RanPark *random = new RanPark(lmp,1);
+    Random *random = new Random(lmp,1);
 
     double dx = xscale*force->numeric(FLERR,arg[2]);
     double dy = yscale*force->numeric(FLERR,arg[3]);
     double dz = zscale*force->numeric(FLERR,arg[4]);
     int seed = force->inumeric(FLERR,arg[5]);
-    if (seed <= 0) error->all(FLERR,"Illegal displace_atoms random command");
+    if (seed < 0) error->all(FLERR,"Illegal displace_atoms random command");
+    if (seed == 0) {
+      seed = update->get_rng_seed();
+      MPI_Bcast(&seed,1,MPI_INT,0,world);
+    }
 
     double **x = atom->x;
     int *mask = atom->mask;
@@ -186,7 +191,7 @@ void DisplaceAtoms::command(int narg, char **arg)
 
     for (i = 0; i < nlocal; i++) {
       if (mask[i] & groupbit) {
-        random->reset(seed,x[i]);
+        random->init(seed,x[i]);
         x[i][0] += dx * 2.0*(random->uniform()-0.5);
         x[i][1] += dy * 2.0*(random->uniform()-0.5);
         x[i][2] += dz * 2.0*(random->uniform()-0.5);

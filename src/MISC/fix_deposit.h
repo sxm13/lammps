@@ -37,7 +37,7 @@ class FixDeposit : public Fix {
   void *extract(const char *, int &);
 
  private:
-  int ninsert,ntype,nfreq,seed;
+  int ninsert,ntype,nfreq;
   int iregion,globalflag,localflag,maxattempt,rateflag,scaleflag,targetflag;
   int mode,rigidflag,shakeflag,idnext;
   double lo,hi,deltasq,nearsq,rate;
@@ -57,7 +57,7 @@ class FixDeposit : public Fix {
 
   int nfirst,ninserted;
   tagint maxtag_all,maxmol_all;
-  class RanPark *random;
+  class Random *random;
 
   void find_maxid();
   void options(int, char **);

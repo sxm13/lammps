@@ -76,8 +76,7 @@ class FixSRD : public Fix {
 
   int dimension;
   int initflag,setupflag,reneighflag;
-  class RanMars *random;
-  class RanPark *randomshift;
+  class Random *random, *randomshift;
 
   // stats
 

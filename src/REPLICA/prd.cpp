@@ -41,8 +41,7 @@
 #include "fix_event_prd.h"
 #include "force.h"
 #include "pair.h"
-#include "random_park.h"
-#include "random_mars.h"
+#include "random.h"
 #include "output.h"
 #include "dump.h"
 #include "finish.h"
@@ -88,6 +87,11 @@ void PRD::command(int narg, char **arg)
   char *id_compute = new char[strlen(arg[5])+1];
   strcpy(id_compute,arg[5]);
   int seed = force->inumeric(FLERR,arg[6]);
+  if (seed < 0) error->universe_all(FLERR,"Illegal random # seed");
+  if (seed == 0) {
+    update->get_rng_seed();
+    MPI_Bcast(&seed,1,MPI_INT,0,universe->uworld);
+  }
 
   options(narg-7,&arg[7]);
 
@@ -142,9 +146,9 @@ void PRD::command(int narg, char **arg)
   // random_clock = same RNG for each replica, for clock updates
   // random_dephase = unique RNG for each replica, for dephasing
 
-  random_select = new RanPark(lmp,seed);
-  random_clock = new RanPark(lmp,seed+1000);
-  random_dephase = new RanMars(lmp,seed+iworld);
+  random_select = new Random(lmp,seed,update->rng_style|Random::RNG_EQUAL);
+  random_clock = new Random(lmp,seed+1000,update->rng_style|Random::RNG_EQUAL);
+  random_dephase = new Random(lmp,seed+iworld);
 
   // create ComputeTemp class to monitor temperature
 

@@ -66,7 +66,7 @@ class FixPour : public Fix {
   int nfreq,nfirst,ninserted,nper;
   double lo_current,hi_current;
   tagint maxtag_all,maxmol_all;
-  class RanPark *random,*random2;
+  class Random *random,*random2;
 
   void find_maxid();
   int overlap(int);

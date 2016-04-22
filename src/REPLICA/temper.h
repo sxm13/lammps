@@ -35,7 +35,7 @@ class Temper : protected Pointers {
   int iworld,nworlds;          // world info
   double boltz;                // copy from output->boltz
   MPI_Comm roots;              // MPI comm with 1 root proc from each world
-  class RanPark *ranswap,*ranboltz;  // RNGs for swapping and Boltz factor
+  class Random *ranswap,*ranboltz;  // RNGs for swapping and Boltz factor
   int nevery;                  // # of timesteps between swaps
   int nswaps;                  // # of tempering swaps to perform
   int seed_swap;               // 0 = toggle swaps, n = RNG for swap direction

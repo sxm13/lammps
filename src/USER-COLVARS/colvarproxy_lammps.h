@@ -10,7 +10,6 @@
 #include "lammps.h"
 #include "domain.h"
 #include "force.h"
-#include "random_park.h"
 #include "update.h"
 
 #include <string>
@@ -47,7 +46,7 @@ class colvarproxy_lammps : public colvarproxy {
 
   // pointers to LAMMPS class instances
   class LAMMPS_NS::LAMMPS *_lmp;
-  class LAMMPS_NS::RanPark *_random;
+  class LAMMPS_NS::Random *_random;
 
   // state of LAMMPS properties
   double t_target, my_timestep, my_boltzmann, my_angstrom;

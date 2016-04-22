@@ -117,8 +117,8 @@ class FixGCMC : public Fix {
 
   class Pair *pair;
 
-  class RanPark *random_equal;
-  class RanPark *random_unequal;
+  class Random *random_equal;
+  class Random *random_unequal;
 
   class Atom *model_atom;
 

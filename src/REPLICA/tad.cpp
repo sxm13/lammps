@@ -43,8 +43,6 @@
 #include "fix_store.h"
 #include "force.h"
 #include "pair.h"
-#include "random_park.h"
-#include "random_mars.h"
 #include "output.h"
 #include "dump.h"
 #include "finish.h"

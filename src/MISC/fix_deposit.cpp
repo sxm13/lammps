@@ -26,7 +26,7 @@
 #include "domain.h"
 #include "lattice.h"
 #include "region.h"
-#include "random_park.h"
+#include "random.h"
 #include "math_extra.h"
 #include "math_const.h"
 #include "memory.h"
@@ -56,9 +56,10 @@ FixDeposit::FixDeposit(LAMMPS *lmp, int narg, char **arg) :
   ninsert = force->inumeric(FLERR,arg[3]);
   ntype = force->inumeric(FLERR,arg[4]);
   nfreq = force->inumeric(FLERR,arg[5]);
-  seed = force->inumeric(FLERR,arg[6]);
 
-  if (seed <= 0) error->all(FLERR,"Illegal fix deposit command");
+  int seed = force->inumeric(FLERR,arg[6]);
+  if (seed < 0) error->all(FLERR,"Illegal fix deposit command");
+  if (seed == 0) seed = update->get_rng_seed();
 
   // read options from end of input line
 
@@ -179,7 +180,8 @@ FixDeposit::FixDeposit(LAMMPS *lmp, int narg, char **arg) :
 
   // random number generator, same for all procs
 
-  random = new RanPark(lmp,seed);
+  MPI_Bcast(&seed,1,MPI_INT,0,world);
+  random = new Random(lmp,seed,update->rng_style|Random::RNG_EQUAL);
 
   // set up reneighboring
 
@@ -771,22 +773,24 @@ void FixDeposit::options(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   pack entire state of Fix into one write
+   write out state of fix and pRNG
 ------------------------------------------------------------------------- */
 
 void FixDeposit::write_restart(FILE *fp)
 {
-  int n = 0;
-  double list[4];
-  list[n++] = random->state();
-  list[n++] = ninserted;
-  list[n++] = nfirst;
-  list[n++] = next_reneighbor;
-
   if (comm->me == 0) {
-    int size = n * sizeof(double);
+    int n = 0;
+    double list[3];
+    list[n++] = ninserted;
+    list[n++] = nfirst;
+    list[n++] = next_reneighbor;
+
+    char *rng_state;
+    int m = random->get_state(&rng_state);
+    int size = n * sizeof(double) + m;
     fwrite(&size,sizeof(int),1,fp);
     fwrite(list,sizeof(double),n,fp);
+    fwrite(rng_state,m,1,fp);
   }
 }
 
@@ -796,15 +800,13 @@ void FixDeposit::write_restart(FILE *fp)
 
 void FixDeposit::restart(char *buf)
 {
+  random->set_state(buf + 3*sizeof(double));
+
   int n = 0;
   double *list = (double *) buf;
-
-  seed = static_cast<int> (list[n++]);
   ninserted = static_cast<int> (list[n++]);
   nfirst = static_cast<int> (list[n++]);
   next_reneighbor = static_cast<int> (list[n++]);
-
-  random->reset(seed);
 }
 
 /* ----------------------------------------------------------------------

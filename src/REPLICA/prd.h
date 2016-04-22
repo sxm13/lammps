@@ -52,8 +52,7 @@ class PRD : protected Pointers {
 
   int ncoincident;
 
-  class RanPark *random_select,*random_clock;
-  class RanMars *random_dephase;
+  class Random *random_select,*random_clock,*random_dephase;
   class Compute *compute_event;
   class FixEventPRD *fix_event;
   class Velocity *velocity;

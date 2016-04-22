@@ -43,7 +43,7 @@ class FixEvaporate : public Fix {
   int nmax;
   int *list,*mark;
 
-  class RanPark *random;
+  class Random *random;
 };
 
 }

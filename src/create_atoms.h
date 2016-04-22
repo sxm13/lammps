@@ -40,7 +40,7 @@ class CreateAtoms : protected Pointers {
   char *xstr_copy,*ystr_copy,*zstr_copy;
 
   class Molecule *onemol;
-  class RanMars *ranmol;
+  class Random *ranmol;
 
   int triclinic;
   double sublo[3],subhi[3];   // epsilon-extended proc sub-box for adding atoms

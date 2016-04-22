@@ -31,7 +31,7 @@
 #include "group.h"
 #include "domain.h"
 #include "region.h"
-#include "random_park.h"
+#include "random.h"
 #include "force.h"
 #include "pair.h"
 #include "bond.h"
@@ -88,7 +88,7 @@ FixGCMC::FixGCMC(LAMMPS *lmp, int narg, char **arg) :
   if (nevery <= 0) error->all(FLERR,"Illegal fix gcmc command");
   if (nexchanges < 0) error->all(FLERR,"Illegal fix gcmc command");
   if (nmcmoves < 0) error->all(FLERR,"Illegal fix gcmc command");
-  if (seed <= 0) error->all(FLERR,"Illegal fix gcmc command");
+  if (seed < 0) error->all(FLERR,"Illegal fix gcmc command");
   if (reservoir_temperature < 0.0)
     error->all(FLERR,"Illegal fix gcmc command");
   if (displace < 0.0) error->all(FLERR,"Illegal fix gcmc command");
@@ -97,13 +97,18 @@ FixGCMC::FixGCMC(LAMMPS *lmp, int narg, char **arg) :
 
   options(narg-11,&arg[11]);
 
+  // ensure the automatic seed is identical across processors for random_equal
+
+  if (seed == 0) update->get_rng_seed();
+  MPI_Bcast(&seed,1,MPI_INT,0,world);
+
   // random number generator, same for all procs
 
-  random_equal = new RanPark(lmp,seed);
+  random_equal = new Random(lmp,seed,update->rng_style|Random::RNG_EQUAL);
 
   // random number generator, not the same for all procs
 
-  random_unequal = new RanPark(lmp,seed);
+  random_unequal = new Random(lmp,seed);
 
   // error checks on region and its extent being inside simulation box
 
@@ -2294,16 +2299,20 @@ double FixGCMC::memory_usage()
 
 void FixGCMC::write_restart(FILE *fp)
 {
-  int n = 0;
-  double list[4];
-  list[n++] = random_equal->state();
-  list[n++] = random_unequal->state();
-  list[n++] = next_reneighbor;
+  char *rng_equal_state, *rng_unequal_state;
+  double list[2];
+
+  int n = random_equal->get_state(&rng_equal_state);
+  int m = random_unequal->get_state(&rng_unequal_state);
+  list[0] = next_reneighbor;
+  list[1] = n;
 
   if (comm->me == 0) {
-    int size = n * sizeof(double);
+    int size = 2*sizeof(double) + n + m;
     fwrite(&size,sizeof(int),1,fp);
-    fwrite(list,sizeof(double),n,fp);
+    fwrite(&list,sizeof(double),2,fp);
+    fwrite(rng_equal_state,n,1,fp);
+    fwrite(rng_unequal_state,n,1,fp);
   }
 }
 
@@ -2313,14 +2322,16 @@ void FixGCMC::write_restart(FILE *fp)
 
 void FixGCMC::restart(char *buf)
 {
-  int n = 0;
   double *list = (double *) buf;
+  next_reneighbor = static_cast<int> (list[0]);
+  int n = static_cast<int> (list[1]);
 
-  seed = static_cast<int> (list[n++]);
-  random_equal->reset(seed);
+  random_equal->set_state(buf + 2*sizeof(double));
+  random_unequal->set_state(buf + 2*sizeof(double) + n);
 
-  seed = static_cast<int> (list[n++]);
-  random_unequal->reset(seed);
+  // ensure the unequal RNG states are not equal, since the
+  // restart file only holds the state from rank 0.
 
-  next_reneighbor = static_cast<int> (list[n++]);
+  for (int i=0; i < comm->nprocs; ++i)
+    random_unequal->uniform();
 }

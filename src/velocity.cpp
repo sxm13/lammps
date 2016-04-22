@@ -28,7 +28,7 @@
 #include "fix.h"
 #include "compute.h"
 #include "compute_temp.h"
-#include "random_park.h"
+#include "random.h"
 #include "group.h"
 #include "comm.h"
 #include "memory.h"
@@ -160,7 +160,11 @@ void Velocity::create(double t_desired, int seed)
   int i;
   double **vhold;
 
-  if (seed <= 0) error->all(FLERR,"Illegal velocity create command");
+  if (seed < 0) error->all(FLERR,"Illegal velocity create command");
+  if (seed == 0) {
+    seed = update->get_rng_seed();
+    MPI_Bcast(&seed,1,MPI_INT,0,world);
+  }
 
   // if sum_flag set, store a copy of current velocities
 
@@ -241,7 +245,7 @@ void Velocity::create(double t_desired, int seed)
 
   int m;
   double vx,vy,vz,factor;
-  RanPark *random = NULL;
+  Random *random = NULL;
 
   if (loop_flag == ALL) {
 
@@ -270,7 +274,7 @@ void Velocity::create(double t_desired, int seed)
     // generate RNGs for all atoms, only assign to ones I own
     // use either per-type mass or per-atom rmass
 
-    random = new RanPark(lmp,seed);
+    random = new Random(lmp,seed);
     int natoms = static_cast<int> (atom->natoms);
 
     for (i = 1; i <= natoms; i++) {
@@ -304,7 +308,7 @@ void Velocity::create(double t_desired, int seed)
     }
 
   } else if (loop_flag == LOCAL) {
-    random = new RanPark(lmp,seed + comm->me);
+    random = new Random(lmp,seed + comm->me);
     for (i = 0; i < WARMUP; i++) random->uniform();
 
     for (i = 0; i < nlocal; i++) {
@@ -328,12 +332,12 @@ void Velocity::create(double t_desired, int seed)
     }
 
   } else if (loop_flag == GEOM) {
-    random = new RanPark(lmp,1);
+    random = new Random(lmp,1);
     double **x = atom->x;
 
     for (i = 0; i < nlocal; i++) {
       if (mask[i] & groupbit) {
-        random->reset(seed,x[i]);
+        random->init(seed,x[i]);
         if (dist_flag == 0) {
           vx = random->uniform() - 0.5;
           vy = random->uniform() - 0.5;

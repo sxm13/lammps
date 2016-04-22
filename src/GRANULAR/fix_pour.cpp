@@ -27,7 +27,7 @@
 #include "region.h"
 #include "region_block.h"
 #include "region_cylinder.h"
-#include "random_park.h"
+#include "random.h"
 #include "math_extra.h"
 #include "math_const.h"
 #include "memory.h"
@@ -62,7 +62,11 @@ FixPour::FixPour(LAMMPS *lmp, int narg, char **arg) :
   ntype = force->inumeric(FLERR,arg[4]);
   seed = force->inumeric(FLERR,arg[5]);
 
-  if (seed <= 0) error->all(FLERR,"Illegal fix pour command");
+  if (seed < 0) error->all(FLERR,"Illegal fix pour command");
+  if (seed == 0) {
+    seed = update->get_rng_seed();
+    MPI_Bcast(&seed,1,MPI_INT,0,world);
+  }
 
   // read options from end of input line
 
@@ -163,7 +167,7 @@ FixPour::FixPour(LAMMPS *lmp, int narg, char **arg) :
 
   // random number generator, same for all procs
 
-  random = new RanPark(lmp,seed);
+  random = new Random(lmp,seed,update->rng_style|Random::RNG_EQUAL);
 
   // allgather arrays
 

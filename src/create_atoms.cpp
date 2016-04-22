@@ -22,6 +22,7 @@
 #include "irregular.h"
 #include "modify.h"
 #include "force.h"
+#include "update.h"
 #include "special.h"
 #include "fix.h"
 #include "compute.h"
@@ -30,8 +31,7 @@
 #include "region.h"
 #include "input.h"
 #include "variable.h"
-#include "random_park.h"
-#include "random_mars.h"
+#include "random.h"
 #include "math_extra.h"
 #include "math_const.h"
 #include "error.h"
@@ -202,7 +202,8 @@ void CreateAtoms::command(int narg, char **arg)
 
   if (style == RANDOM) {
     if (nrandom < 0) error->all(FLERR,"Illegal create_atoms command");
-    if (seed <= 0) error->all(FLERR,"Illegal create_atoms command");
+    if (seed < 0) error->all(FLERR,"Illegal create_atoms command");
+    if (seed == 0) seed = update->get_rng_seed();
   }
 
   // error check and further setup for mode = MOLECULE
@@ -220,13 +221,16 @@ void CreateAtoms::command(int narg, char **arg)
                  "Create_atoms molecule has atom IDs, but system does not");
     onemol->check_attributes(0);
 
+    if (molseed < 0) error->all(FLERR,"Illegal create_atoms command");
+    if (molseed == 0) molseed = update->get_rng_seed();
+
     // create_atoms uses geoemetric center of molecule for insertion
 
     onemol->compute_center();
 
     // molecule random number generator, different for each proc
 
-    ranmol = new RanMars(lmp,molseed+comm->me);
+    ranmol = new Random(lmp,molseed);
   }
 
   // error check and further setup for variable test
@@ -620,7 +624,8 @@ void CreateAtoms::add_random()
 
   // random number generator, same for all procs
 
-  RanPark *random = new RanPark(lmp,seed);
+  MPI_Bcast(&seed,1,MPI_INT,0,world);
+  Random *random = new Random(lmp,seed);
 
   // bounding box for atom creation
   // in real units, even if triclinic

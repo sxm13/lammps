@@ -32,6 +32,7 @@
 #include "respa.h"
 #include "universe.h"
 #include "update.h"
+#include "random.h"
 #include "citeme.h"
 
 #include "colvarproxy_lammps.h"
@@ -280,7 +281,7 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
   root2root = MPI_COMM_NULL;
 
   conf_file = strdup(arg[3]);
-  rng_seed = 1966;
+  rng_seed = 0;
   unwrap_flag = 1;
 
   inp_name = NULL;
@@ -300,6 +301,7 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
       out_name = strdup(arg[argsdone+1]);
     } else if (0 == strcmp(arg[argsdone], "seed")) {
       rng_seed = force->inumeric(FLERR,arg[argsdone+1]);
+      if (rng_seed < 0) error->all(FLERR,"Illegal random seed");
     } else if (0 == strcmp(arg[argsdone], "unwrap")) {
       if (0 == strcmp(arg[argsdone+1], "yes")) {
         unwrap_flag = 1;
@@ -317,6 +319,7 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
   }
 
   if (!out_name) out_name = strdup("out");
+  if (rng_seed == 0) update->get_rng_seed();
 
   /* initialize various state variables. */
   tstat_id = -1;

@@ -30,8 +30,9 @@
 #include "force.h"
 #include "pair.h"
 #include "input.h"
+#include "update.h"
 #include "variable.h"
-#include "random_park.h"
+#include "random.h"
 #include "math_extra.h"
 #include "math_const.h"
 #include "memory.h"
@@ -103,8 +104,9 @@ void Set::command(int narg, char **arg)
         error->all(FLERR,"Invalid value in set command");
       if (fraction < 0.0 || fraction > 1.0)
         error->all(FLERR,"Invalid value in set command");
-      if (ivalue <= 0)
+      if (ivalue < 0)
         error->all(FLERR,"Invalid random number seed in set command");
+      if (ivalue == 0) ivalue = update->get_rng_seed();
       setrandom(TYPE_FRACTION);
       iarg += 4;
 
@@ -206,8 +208,9 @@ void Set::command(int narg, char **arg)
       dvalue = force->numeric(FLERR,arg[iarg+2]);
       if (!atom->mu_flag)
         error->all(FLERR,"Cannot set this attribute for this atom style");
-      if (ivalue <= 0)
+      if (ivalue < 0)
         error->all(FLERR,"Invalid random number seed in set command");
+      if (ivalue == 0) ivalue = update->get_rng_seed();
       if (dvalue <= 0.0)
         error->all(FLERR,"Invalid dipole length in set command");
       setrandom(DIPOLE_RANDOM);
@@ -233,8 +236,9 @@ void Set::command(int narg, char **arg)
       ivalue = force->inumeric(FLERR,arg[iarg+1]);
       if (!atom->ellipsoid_flag && !atom->tri_flag && !atom->body_flag)
         error->all(FLERR,"Cannot set this attribute for this atom style");
-      if (ivalue <= 0)
+      if (ivalue < 0)
         error->all(FLERR,"Invalid random number seed in set command");
+      if (ivalue == 0) ivalue = update->get_rng_seed();
       setrandom(QUAT_RANDOM);
       iarg += 2;
 
@@ -255,8 +259,9 @@ void Set::command(int narg, char **arg)
       ivalue = force->inumeric(FLERR,arg[iarg+1]);
       if (!atom->line_flag)
         error->all(FLERR,"Cannot set this attribute for this atom style");
-      if (ivalue <= 0)
+      if (ivalue < 0)
         error->all(FLERR,"Invalid random number seed in set command");
+      if (ivalue == 0) ivalue = update->get_rng_seed();
       set(THETA_RANDOM);
       iarg += 2;
 
@@ -719,7 +724,7 @@ void Set::set(int keyword)
       if (domain->dimension == 2 && (xvalue != 0.0 || yvalue != 0.0))
         error->one(FLERR,"Cannot set quaternion with xy components "
                    "for 2d system");
-	
+
       double theta2 = MY_PI2 * wvalue/180.0;
       double sintheta2 = sin(theta2);
       quat[0] = cos(theta2);
@@ -802,9 +807,10 @@ void Set::setrandom(int keyword)
   AtomVecTri *avec_tri = (AtomVecTri *) atom->style_match("tri");
   AtomVecBody *avec_body = (AtomVecBody *) atom->style_match("body");
 
-  RanPark *random = new RanPark(lmp,1);
+  Random *random = new Random(lmp,1);
   double **x = atom->x;
   int seed = ivalue;
+  MPI_Bcast(&seed,1,MPI_INT,0,world);
 
   // set fraction of atom types to newtype
 
@@ -813,7 +819,7 @@ void Set::setrandom(int keyword)
 
     for (i = 0; i < nlocal; i++)
       if (select[i]) {
-        random->reset(seed,x[i]);
+        random->init(seed,x[i]);
         if (random->uniform() > fraction) continue;
         atom->type[i] = newtype;
         count++;
@@ -831,7 +837,7 @@ void Set::setrandom(int keyword)
     if (domain->dimension == 3) {
       for (i = 0; i < nlocal; i++)
         if (select[i]) {
-          random->reset(seed,x[i]);
+          random->init(seed,x[i]);
           mu[i][0] = random->uniform() - 0.5;
           mu[i][1] = random->uniform() - 0.5;
           mu[i][2] = random->uniform() - 0.5;
@@ -847,7 +853,7 @@ void Set::setrandom(int keyword)
     } else {
       for (i = 0; i < nlocal; i++)
         if (select[i]) {
-          random->reset(seed,x[i]);
+          random->init(seed,x[i]);
           mu[i][0] = random->uniform() - 0.5;
           mu[i][1] = random->uniform() - 0.5;
           mu[i][2] = 0.0;
@@ -874,12 +880,12 @@ void Set::setrandom(int keyword)
             quat = avec_ellipsoid->bonus[atom->ellipsoid[i]].quat;
           else if (avec_tri && atom->tri[i] >= 0)
             quat = avec_tri->bonus[atom->tri[i]].quat;
-	  else if (avec_body && atom->body[i] >= 0)
-	    quat = avec_body->bonus[atom->body[i]].quat;
+          else if (avec_body && atom->body[i] >= 0)
+            quat = avec_body->bonus[atom->body[i]].quat;
           else
             error->one(FLERR,"Cannot set quaternion for atom that has none");
 
-          random->reset(seed,x[i]);
+          random->init(seed,x[i]);
           s = random->uniform();
           t1 = sqrt(1.0-s);
           t2 = sqrt(s);
@@ -898,12 +904,12 @@ void Set::setrandom(int keyword)
         if (select[i]) {
           if (avec_ellipsoid && atom->ellipsoid[i] >= 0)
             quat = avec_ellipsoid->bonus[atom->ellipsoid[i]].quat;
-	  else if (avec_body && atom->body[i] >= 0)
-	    quat = avec_body->bonus[atom->body[i]].quat;
+          else if (avec_body && atom->body[i] >= 0)
+            quat = avec_body->bonus[atom->body[i]].quat;
           else
             error->one(FLERR,"Cannot set quaternion for atom that has none");
 
-          random->reset(seed,x[i]);
+          random->init(seed,x[i]);
           theta2 = MY_PI*random->uniform();
           quat[0] = cos(theta2);
           quat[1] = 0.0;
@@ -919,11 +925,11 @@ void Set::setrandom(int keyword)
     int nlocal = atom->nlocal;
     for (i = 0; i < nlocal; i++) {
       if (select[i]) {
-	if (atom->line[i] < 0)
-	  error->one(FLERR,"Cannot set theta for atom that is not a line");
-	random->reset(seed,x[i]);
-	avec_line->bonus[atom->line[i]].theta = MY_2PI*random->uniform();
-	count++;
+        if (atom->line[i] < 0)
+          error->one(FLERR,"Cannot set theta for atom that is not a line");
+        random->init(seed,x[i]);
+        avec_line->bonus[atom->line[i]].theta = MY_2PI*random->uniform();
+        count++;
       }
     }
   }
