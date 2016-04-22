@@ -48,7 +48,7 @@
 #include "neighbor.h"
 #include "neigh_list.h"
 #include "neigh_request.h"
-#include "random_mars.h"
+#include "random.h"
 #include "memory.h"
 #include "domain.h"
 #include "modify.h"

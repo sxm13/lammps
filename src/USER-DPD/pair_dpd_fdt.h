@@ -44,7 +44,7 @@ class PairDPDfdt : public Pair {
   double **sigma;
   double temperature;
 
-  class RanMars *random;
+  class Random *random;
 
  protected:
   double cut_global;

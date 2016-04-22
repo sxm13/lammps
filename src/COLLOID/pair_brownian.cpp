@@ -35,7 +35,7 @@
 #include "fix_wall.h"
 #include "input.h"
 #include "variable.h"
-#include "random_mars.h"
+#include "random.h"
 #include "math_const.h"
 #include "math_special.h"
 #include "memory.h"
@@ -397,7 +397,7 @@ void PairBrownian::settings(int narg, char **arg)
   // initialize Marsaglia RNG with processor-unique seed
 
   delete random;
-  random = new RanMars(lmp,seed + comm->me);
+  random = new Random(lmp,seed + comm->me);
 
   // reset cutoffs that have been explicitly set
 
@@ -674,7 +674,7 @@ void PairBrownian::read_restart_settings(FILE *fp)
   // additional setup based on restart parameters
 
   delete random;
-  random = new RanMars(lmp,seed + comm->me);
+  random = new Random(lmp,seed + comm->me);
 }
 
 /* ----------------------------------------------------------------------*/

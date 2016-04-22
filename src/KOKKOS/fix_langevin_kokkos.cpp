@@ -23,7 +23,7 @@
 #include "error.h"
 #include "memory.h"
 #include "group.h"
-#include "random_mars.h"
+#include "random.h"
 #include "compute.h"
 #include "comm.h"
 #include "modify.h"

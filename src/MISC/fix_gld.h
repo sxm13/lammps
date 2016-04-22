@@ -62,7 +62,7 @@ class FixGLD : public Fix {
 
   double **s_gld;
 
-  class RanMars *random;
+  class Random *random;
 };
 
 }

@@ -152,7 +152,7 @@ class FixRigidSmall : public Fix {
   double t_start,t_stop,t_period;   // thermostat params
   double **langextra;               // Langevin thermostat forces and torques
   int maxlang;                      // max size of langextra
-  class RanMars *random;            // RNG
+  class Random *random;            // RNG
 
   int tstat_flag,pstat_flag;        // 0/1 = no/yes thermostat/barostat
 

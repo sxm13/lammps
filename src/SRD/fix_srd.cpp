@@ -34,7 +34,6 @@
 #include "modify.h"
 #include "fix_deform.h"
 #include "fix_wall_srd.h"
-#include "random_mars.h"
 #include "random.h"
 #include "math_const.h"
 #include "citeme.h"

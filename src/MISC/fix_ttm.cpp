@@ -28,7 +28,7 @@
 #include "region.h"
 #include "respa.h"
 #include "comm.h"
-#include "random_mars.h"
+#include "random.h"
 #include "memory.h"
 #include "error.h"
 
@@ -104,7 +104,7 @@ FixTTM::FixTTM(LAMMPS *lmp, int narg, char **arg) :
 
   // initialize Marsaglia RNG with processor-unique seed
 
-  random = new RanMars(lmp,seed + comm->me);
+  random = new Random(lmp,seed + comm->me);
 
   // allocate per-type arrays for force prefactors
 
@@ -630,7 +630,7 @@ void FixTTM::restart(char *buf)
         T_electron[ixnode][iynode][iznode] = rlist[n++];
 
   delete random;
-  random = new RanMars(lmp,seed+comm->me);
+  random = new Random(lmp,seed+comm->me);
 }
 
 /* ----------------------------------------------------------------------

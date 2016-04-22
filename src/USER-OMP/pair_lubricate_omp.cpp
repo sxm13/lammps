@@ -23,7 +23,7 @@
 #include "neigh_list.h"
 #include "update.h"
 #include "variable.h"
-#include "random_mars.h"
+#include "random.h"
 #include "fix_wall.h"
 #include "fix_deform.h"
 #include "math_const.h"

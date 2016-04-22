@@ -37,7 +37,7 @@ class FixWallPiston : public Fix {
   double roughdist,roughoff,x0,y0,z0,vx,vy,vz,maxvx,maxvy,maxvz,paccelx,paccely,paccelz, angfreq;
   int tempflag, tseed;
   double t_target, t_period, t_extent;
-  class RanMars *randomt;
+  class Random *randomt;
   double *gfactor1,*gfactor2;
 };
 

@@ -34,7 +34,7 @@
 #include "comm.h"
 #include "input.h"
 #include "variable.h"
-#include "random_mars.h"
+#include "random.h"
 #include "memory.h"
 #include "error.h"
 #include "group.h"
@@ -345,7 +345,7 @@ FixGLE::FixGLE(LAMMPS *lmp, int narg, char **arg) :
   // initialize Marsaglia RNG with processor-unique seed
   // NB: this means runs will not be the same with different numbers of processors
   if (seed <= 0) error->all(FLERR,"Illegal fix gle command");
-  random = new RanMars(lmp,seed + comm->me);
+  random = new Random(lmp,seed + comm->me);
 
   // allocate per-type arrays for mass-scaling
   sqrt_m=NULL;

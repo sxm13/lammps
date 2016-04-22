@@ -28,7 +28,7 @@
 #include "comm.h"
 #include "input.h"
 #include "variable.h"
-#include "random_mars.h"
+#include "random.h"
 #include "memory.h"
 #include "error.h"
 #include "group.h"
@@ -118,7 +118,7 @@ FixGLD::FixGLD(LAMMPS *lmp, int narg, char **arg) :
   }
 
   // initialize Marsaglia RNG with processor-unique seed
-  random = new RanMars(lmp,seed + comm->me);
+  random = new Random(lmp,seed + comm->me);
 
   // initialize the extended variables
   init_s_gld();

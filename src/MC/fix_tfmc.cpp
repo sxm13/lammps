@@ -24,7 +24,7 @@
 #include "force.h"
 #include "update.h"
 #include "group.h"
-#include "random_mars.h"
+#include "random.h"
 #include "comm.h"
 #include "domain.h"
 #include "memory.h"
@@ -86,7 +86,7 @@ FixTFMC::FixTFMC(LAMMPS *lmp, int narg, char **arg) :
     nmax = -1;
   }
 
-  random_num = new RanMars(lmp,seed + comm->me);
+  random_num = new Random(lmp,seed + comm->me);
 }
 
 /* ---------------------------------------------------------------------- */

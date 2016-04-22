@@ -30,7 +30,7 @@
 #include "comm.h"
 #include "force.h"
 #include "output.h"
-#include "random_mars.h"
+#include "random.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -422,7 +422,7 @@ FixRigidSmall::FixRigidSmall(LAMMPS *lmp, int narg, char **arg) :
   maxlang = 0;
   langextra = NULL;
   random = NULL;
-  if (langflag) random = new RanMars(lmp,seed + comm->me);
+  if (langflag) random = new Random(lmp,seed + comm->me);
 
   // mass vector for granular pair styles
 

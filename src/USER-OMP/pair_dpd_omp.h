@@ -39,7 +39,7 @@ class PairDPDOMP : public PairDPD, public ThrOMP {
   virtual double memory_usage();
 
  protected:
-  class RanMars **random_thr;
+  class Random **random_thr;
   int nthreads;
 
  private:

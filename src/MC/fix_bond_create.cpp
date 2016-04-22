@@ -26,7 +26,7 @@
 #include "neighbor.h"
 #include "neigh_list.h"
 #include "neigh_request.h"
-#include "random_mars.h"
+#include "random.h"
 #include "memory.h"
 #include "error.h"
 
@@ -134,7 +134,7 @@ FixBondCreate::FixBondCreate(LAMMPS *lmp, int narg, char **arg) :
 
   // initialize Marsaglia RNG with processor-unique seed
 
-  random = new RanMars(lmp,seed + me);
+  random = new Random(lmp,seed + me);
 
   // perform initial allocation of atom-based arrays
   // register with Atom class

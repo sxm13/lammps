@@ -25,7 +25,7 @@
 #include "neighbor.h"
 #include "neigh_list.h"
 #include "neigh_request.h"
-#include "random_mars.h"
+#include "random.h"
 #include "memory.h"
 #include "error.h"
 
@@ -401,7 +401,7 @@ void DeleteAtoms::delete_porosity(int narg, char **arg)
   int seed = force->inumeric(FLERR,arg[3]);
   options(narg-4,&arg[4]);
 
-  RanMars *random = new RanMars(lmp,seed + comm->me);
+  Random *random = new Random(lmp,seed + comm->me);
 
   // allocate and initialize deletion list
 

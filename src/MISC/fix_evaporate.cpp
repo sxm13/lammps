@@ -25,7 +25,6 @@
 #include "force.h"
 #include "group.h"
 #include "random.h"
-#include "random_mars.h"
 #include "memory.h"
 #include "error.h"
 

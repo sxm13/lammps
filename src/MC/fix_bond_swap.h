@@ -49,7 +49,7 @@ class FixBondSwap : public Fix {
 
   class NeighList *list;
   class Compute *temperature;
-  class RanMars *random;
+  class Random *random;
 
   double dist_rsq(int, int);
   double pair_eng(int, int);

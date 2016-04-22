@@ -63,7 +63,7 @@ class PairDSMC : public Pair {
   int number_of_B;
   int max_particle_list;
 
-  class RanMars *random;
+  class Random *random;
 
   int **particle_list;
   int **first;

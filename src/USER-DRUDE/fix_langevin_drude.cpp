@@ -20,7 +20,7 @@
 #include "comm.h"
 #include "input.h"
 #include "variable.h"
-#include "random_mars.h"
+#include "random.h"
 #include "group.h"
 #include "update.h"
 #include "modify.h"
@@ -85,8 +85,8 @@ FixLangevinDrude::FixLangevinDrude(LAMMPS *lmp, int narg, char **arg) :
     error->all(FLERR,"Fix langevin/drude period must be > 0.0");
   if (seed_drude <= 0) error->all(FLERR,"Illegal langevin/drude seed");
 
-  random_core  = new RanMars(lmp,seed_core);
-  random_drude = new RanMars(lmp,seed_drude);
+  random_core  = new Random(lmp,seed_core);
+  random_drude = new Random(lmp,seed_drude);
 
   int iarg = 9;
   zero = 0;

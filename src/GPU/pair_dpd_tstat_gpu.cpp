@@ -29,7 +29,7 @@
 #include "memory.h"
 #include "error.h"
 #include "neigh_request.h"
-#include "random_mars.h"
+#include "random.h"
 #include "universe.h"
 #include "update.h"
 #include "domain.h"

@@ -28,7 +28,7 @@
 #include "domain.h"
 #include "modify.h"
 #include "compute.h"
-#include "random_mars.h"
+#include "random.h"
 #include "citeme.h"
 #include "memory.h"
 #include "error.h"
@@ -75,7 +75,7 @@ FixBondSwap::FixBondSwap(LAMMPS *lmp, int narg, char **arg) :
   // initialize Marsaglia RNG with processor-unique seed
 
   int seed = force->inumeric(FLERR,arg[6]);
-  random = new RanMars(lmp,seed + comm->me);
+  random = new Random(lmp,seed + comm->me);
 
   // error check
 

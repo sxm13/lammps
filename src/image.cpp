@@ -22,7 +22,7 @@
 #include <string.h>
 #include "image.h"
 #include "math_extra.h"
-#include "random_mars.h"
+#include "random.h"
 #include "math_const.h"
 #include "error.h"
 #include "force.h"
@@ -250,7 +250,7 @@ void Image::view_params(double boxxlo, double boxxhi, double boxylo,
   // adjust strength of the SSAO
 
   if (ssao) {
-    if (!random) random = new RanMars(lmp,seed+me);
+    if (!random) random = new Random(lmp,seed+me);
     SSAORadius = maxdel * 0.05 * ssaoint;
     SSAOSamples = static_cast<int> (8.0 + 32.0*ssaoint);
     SSAOJitter = MY_PI / 12;

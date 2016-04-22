@@ -21,7 +21,7 @@
 #include "lattice.h"
 #include "update.h"
 #include "error.h"
-#include "random_mars.h"
+#include "random.h"
 #include "force.h"
 #include "comm.h"
 #include "math_const.h"
@@ -90,7 +90,7 @@ FixWallPiston::FixWallPiston(LAMMPS *lmp, int narg, char **arg) :
       if (t_period <= 0) error->all(FLERR,"Illegal fix wall/piston command");
       if (t_extent <= 0) error->all(FLERR,"Illegal fix wall/piston command");
       if (tseed <= 0) error->all(FLERR,"Illegal fix wall/piston command");
-      randomt = new RanMars(lmp,tseed + comm->me);
+      randomt = new Random(lmp,tseed + comm->me);
       gfactor1 = new double[atom->ntypes+1];
       gfactor2 = new double[atom->ntypes+1];
       iarg += 5;

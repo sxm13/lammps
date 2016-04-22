@@ -47,7 +47,7 @@ class PairDPD : public Pair {
   double **cut;
   double **a0,**gamma;
   double **sigma;
-  class RanMars *random;
+  class Random *random;
 
   void allocate();
 };

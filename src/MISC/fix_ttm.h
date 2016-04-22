@@ -52,7 +52,7 @@ class FixTTM : public Fix {
   int nfileevery;
   int nlevels_respa;
   int seed;
-  class RanMars *random;
+  class Random *random;
   FILE *fp,*fpr;
   int nxnodes,nynodes,nznodes,total_nnodes;
   int ***nsum;

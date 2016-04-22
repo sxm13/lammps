@@ -32,7 +32,7 @@
 #include "comm.h"
 #include "input.h"
 #include "variable.h"
-#include "random_mars.h"
+#include "random.h"
 #include "memory.h"
 #include "error.h"
 #include "group.h"

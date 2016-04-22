@@ -23,7 +23,7 @@
 #include "neigh_list.h"
 #include "update.h"
 #include "variable.h"
-#include "random_mars.h"
+#include "random.h"
 #include "fix_wall.h"
 
 #include "math_const.h"
@@ -127,7 +127,7 @@ void PairBrownianPolyOMP::compute(int eflag, int vflag)
     }
 
     nthreads = comm->nthreads;
-    random_thr = new RanMars*[nthreads];
+    random_thr = new Random*[nthreads];
     for (int i=1; i < nthreads; ++i)
       random_thr[i] = NULL;
 
@@ -150,7 +150,7 @@ void PairBrownianPolyOMP::compute(int eflag, int vflag)
     // generate a random number generator instance for
     // all threads != 0. make sure we use unique seeds.
     if ((tid > 0) && (random_thr[tid] == NULL))
-      random_thr[tid] = new RanMars(Pair::lmp, seed + comm->me
+      random_thr[tid] = new Random(Pair::lmp, seed + comm->me
                                     + comm->nprocs*tid);
 
     if (flaglog) {
@@ -184,7 +184,7 @@ void PairBrownianPolyOMP::eval(int iifrom, int iito, ThrData * const thr)
   const int * const type = atom->type;
   const int nlocal = atom->nlocal;
 
-  RanMars &rng = *random_thr[thr->get_tid()];
+  Random &rng = *random_thr[thr->get_tid()];
 
   double vxmu2f = force->vxmu2f;
   int overlaps = 0;
@@ -397,8 +397,8 @@ double PairBrownianPolyOMP::memory_usage()
 {
   double bytes = memory_usage_thr();
   bytes += PairBrownianPoly::memory_usage();
-  bytes += nthreads * sizeof(RanMars*);
-  bytes += nthreads * sizeof(RanMars);
+  bytes += nthreads * sizeof(Random*);
+  bytes += nthreads * sizeof(Random);
 
   return bytes;
 }

@@ -35,7 +35,7 @@
 #include "fix_wall.h"
 #include "input.h"
 #include "variable.h"
-#include "random_mars.h"
+#include "random.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"

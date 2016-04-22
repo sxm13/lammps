@@ -61,7 +61,7 @@ class FixGLE : public Fix {
   double dtv, dtf;
 
   int dogle, fnoneq, gle_every, gle_step;
-  class RanMars *random;
+  class Random *random;
   double *sqrt_m;
   double *step_respa;
   double energy;

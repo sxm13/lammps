@@ -27,7 +27,7 @@
 #include "modify.h"
 #include "group.h"
 #include "comm.h"
-#include "random_mars.h"
+#include "random.h"
 #include "force.h"
 #include "output.h"
 #include "math_const.h"
@@ -507,7 +507,7 @@ FixRigid::FixRigid(LAMMPS *lmp, int narg, char **arg) :
 
   // initialize Marsaglia RNG with processor-unique seed
 
-  if (langflag) random = new RanMars(lmp,seed + me);
+  if (langflag) random = new Random(lmp,seed + me);
   else random = NULL;
 
   // initialize vector output quantities in case accessed before run

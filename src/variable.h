@@ -75,8 +75,8 @@ class Variable : protected Pointers {
   int *eval_in_progress;       // flag if evaluation of variable is in progress
   int treetype;                // ATOM or VECTOR flag for formula evaluation
 
-  class RanMars *randomequal;   // random number generator for equal-style vars
-  class RanMars *randomatom;    // random number generator for atom-style vars
+  class Random *randomequal;   // random number generator for equal-style vars
+  class Random *randomatom;    // random number generator for atom-style vars
 
   int precedence[17];      // precedence level of math operators
                            // set length to include up to OR in enum

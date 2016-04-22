@@ -69,7 +69,7 @@ class FixBondCreate : public Fix {
 
   tagint *copy;
 
-  class RanMars *random;
+  class Random *random;
   class NeighList *list;
 
   int countflag,commflag;

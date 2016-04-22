@@ -27,7 +27,7 @@
 #include "error.h"
 #include "domain.h"
 #include "update.h"
-#include "random_mars.h"
+#include "random.h"
 #include <limits.h>
 
 using namespace LAMMPS_NS;
@@ -221,7 +221,7 @@ void PairDSMC::settings(int narg, char **arg)
   if (max_cell_size <= 0.0) error->all(FLERR,"Illegal pair_style command");
   if (seed <= 0) error->all(FLERR,"Illegal pair_style command");
   if (random) delete random;
-  random = new RanMars(lmp,seed + comm->me);
+  random = new Random(lmp,seed + comm->me);
 
   kT_ref = force->boltz*T_ref;
 
@@ -397,7 +397,7 @@ void PairDSMC::read_restart_settings(FILE *fp)
   // same seed that pair_style command initially specified
 
   if (random) delete random;
-  random = new RanMars(lmp,seed + comm->me);
+  random = new Random(lmp,seed + comm->me);
 }
 
 /*-------------------------------------------------------------------------

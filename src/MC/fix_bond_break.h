@@ -57,7 +57,7 @@ class FixBondBreak : public Fix {
 
   tagint *copy;
 
-  class RanMars *random;
+  class Random *random;
   int nlevels_respa;
 
   int commflag;

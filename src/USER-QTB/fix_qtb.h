@@ -57,7 +57,7 @@ class FixQTB : public Fix {
   class Compute *temperature;
   double h_timestep;						// time step to update the random forces
   int alpha;							// number of time steps to update the random forces
-  class RanMars *random;					// random number generator
+  class Random *random;					// random number generator
   double *gfactor1,*gfactor3;					// factors of frictions and random forces
   double *omega_H,*time_H;					// H gives the desired power spectrum
   double **random_array_0, **random_array_1, **random_array_2;	// random number arrays give independence between atoms and directions

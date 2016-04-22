@@ -30,7 +30,7 @@
 #include "region.h"
 #include "respa.h"
 #include "comm.h"
-#include "random_mars.h"
+#include "random.h"
 #include "memory.h"
 #include "error.h"
 #include "citeme.h"
@@ -242,7 +242,7 @@ FixTTMMod::FixTTMMod(LAMMPS *lmp, int narg, char **arg) :
   if (surface_l < 0) error->all(FLERR,"Surface coordinates must be >= 0");
   if (surface_l >= surface_r) error->all(FLERR, "Left surface coordinate must be less than right surface coordinate");
   // initialize Marsaglia RNG with processor-unique seed
-  random = new RanMars(lmp,seed + comm->me);
+  random = new Random(lmp,seed + comm->me);
   // allocate per-type arrays for force prefactors
   gfactor1 = new double[atom->ntypes+1];
   gfactor2 = new double[atom->ntypes+1];
@@ -867,7 +867,7 @@ void FixTTMMod::restart(char *buf)
       for (int iznode = 0; iznode < nznodes; iznode++)
         T_electron[ixnode][iynode][iznode] = rlist[n++];
   delete random;
-  random = new RanMars(lmp,seed+comm->me);
+  random = new Random(lmp,seed+comm->me);
 }
 
 /* ----------------------------------------------------------------------

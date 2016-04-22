@@ -114,7 +114,7 @@ class Image : protected Pointers {
 
   // SSAO RNG
 
-  class RanMars *random;
+  class Random *random;
 
   // internal methods
 

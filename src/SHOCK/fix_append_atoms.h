@@ -39,8 +39,8 @@ class FixAppendAtoms : public Fix {
   int spatflag, xloflag, xhiflag, yloflag, yhiflag, zloflag, zhiflag;
   int ranflag, tempflag, xseed, tseed;
   double ranx, rany, ranz, t_target, t_period, t_extent;
-  class RanMars *randomx;
-  class RanMars *randomt;
+  class Random *randomx;
+  class Random *randomt;
   int scaleflag, freq;
   int nbasis;
   int *basistype;

@@ -129,7 +129,7 @@ class FixRigid : public Fix {
   int dilate_group_bit;      // mask for dilation group
   char *id_dilate;           // group name to dilate
 
-  class RanMars *random;
+  class Random *random;
   class AtomVecEllipsoid *avec_ellipsoid;
   class AtomVecLine *avec_line;
   class AtomVecTri *avec_tri;

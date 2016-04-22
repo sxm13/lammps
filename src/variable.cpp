@@ -31,7 +31,7 @@
 #include "force.h"
 #include "output.h"
 #include "thermo.h"
-#include "random_mars.h"
+#include "random.h"
 #include "math_const.h"
 #include "atom_masks.h"
 #include "python_wrapper.h"
@@ -628,7 +628,7 @@ int Variable::next(int narg, char **arg)
     int nextindex;
     if (me == 0) {
       int seed = 12345 + universe->me + which[find(arg[0])];
-      RanMars *random = new RanMars(lmp,seed);
+      Random *random = new Random(lmp,seed);
       int delay = (int) (1000000*random->uniform());
       usleep(delay);
       while (1) {
@@ -2476,7 +2476,7 @@ double Variable::collapse_tree(Tree *tree)
       int seed = static_cast<int> (collapse_tree(tree->extra[0]));
       if (seed <= 0)
         error->one(FLERR,"Invalid math function in variable formula");
-      randomatom = new RanMars(lmp,seed+me);
+      randomatom = new Random(lmp,seed+me);
     }
     return 0.0;
   }
@@ -2490,7 +2490,7 @@ double Variable::collapse_tree(Tree *tree)
       int seed = static_cast<int> (collapse_tree(tree->extra[0]));
       if (seed <= 0)
         error->one(FLERR,"Invalid math function in variable formula");
-      randomatom = new RanMars(lmp,seed+me);
+      randomatom = new Random(lmp,seed+me);
     }
     return 0.0;
   }
@@ -2834,7 +2834,7 @@ double Variable::eval_tree(Tree *tree, int i)
       int seed = static_cast<int> (eval_tree(tree->extra[0],i));
       if (seed <= 0)
         error->one(FLERR,"Invalid math function in variable formula");
-      randomatom = new RanMars(lmp,seed+me);
+      randomatom = new Random(lmp,seed+me);
     }
     return randomatom->uniform()*(upper-lower)+lower;
   }
@@ -2847,7 +2847,7 @@ double Variable::eval_tree(Tree *tree, int i)
       int seed = static_cast<int> (eval_tree(tree->extra[0],i));
       if (seed <= 0)
         error->one(FLERR,"Invalid math function in variable formula");
-      randomatom = new RanMars(lmp,seed+me);
+      randomatom = new Random(lmp,seed+me);
     }
     return mu + sigma*randomatom->gaussian();
   }
@@ -3340,7 +3340,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
         int seed = static_cast<int> (values[0]);
         if (seed <= 0)
           error->all(FLERR,"Invalid math function in variable formula");
-        randomequal = new RanMars(lmp,seed);
+        randomequal = new Random(lmp,seed);
       }
       argstack[nargstack++] = randomequal->uniform()*(value2-value1) + value1;
     }
@@ -3355,7 +3355,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
         int seed = static_cast<int> (values[0]);
         if (seed <= 0)
           error->all(FLERR,"Invalid math function in variable formula");
-        randomequal = new RanMars(lmp,seed);
+        randomequal = new Random(lmp,seed);
       }
       argstack[nargstack++] = value1 + value2*randomequal->gaussian();
     }

@@ -69,7 +69,7 @@ class FixLangevin : public Fix {
   class Compute *temperature;
 
   int nlevels_respa;
-  class RanMars *random;
+  class Random *random;
   int seed;
 
   // comment next line to turn off templating

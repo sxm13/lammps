@@ -48,7 +48,7 @@ class FixLangevinDrude : public Fix {
   double energy;
   int tflag;
 
-  class RanMars *random_core, *random_drude;
+  class Random *random_core, *random_drude;
   int zero;
   bigint ncore;
   FixDrude * fix_drude;

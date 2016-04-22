@@ -24,7 +24,7 @@
 #include "comm.h"
 #include "neighbor.h"
 #include "domain.h"
-#include "random_mars.h"
+#include "random.h"
 #include "memory.h"
 #include "error.h"
 
@@ -87,7 +87,7 @@ FixBondBreak::FixBondBreak(LAMMPS *lmp, int narg, char **arg) :
 
   // initialize Marsaglia RNG with processor-unique seed
 
-  random = new RanMars(lmp,seed + me);
+  random = new Random(lmp,seed + me);
 
   // set comm sizes needed by this fix
   // forward is big due to comm of broken bonds and 1-2 neighbors

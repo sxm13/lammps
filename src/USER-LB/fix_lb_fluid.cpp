@@ -30,7 +30,7 @@
 #include <iostream>
 #include <iomanip>
 #include "group.h"
-#include "random_mars.h"
+#include "random.h"
 #include "update.h"
 #include "force.h"
 #include "modify.h"
@@ -492,7 +492,7 @@ a z wall velocity without implementing fixed BCs in z");
   memory->create(Fftempz,subNbx+3,subNby+3,5,3,"FixLbFluid:Fftempz");
 
   if(noisestress==1){
-    random = new RanMars(lmp,seed + comm->me);
+    random = new Random(lmp,seed + comm->me);
   }
 
   //--------------------------------------------------------------------------

@@ -34,7 +34,7 @@
 #include "comm.h"
 #include "input.h"
 #include "variable.h"
-#include "random_mars.h"
+#include "random.h"
 #include "memory.h"
 #include "error.h"
 #include "group.h"
@@ -101,7 +101,7 @@ FixQTB::FixQTB(LAMMPS *lmp, int narg, char **arg) :
   temperature = NULL;
 
   // initialize Marsaglia RNG with processor-unique seed
-  random = new RanMars(lmp,seed + comm->me);
+  random = new Random(lmp,seed + comm->me);
 
   // allocate per-type arrays for force prefactors
   gfactor1 = new double[atom->ntypes+1];

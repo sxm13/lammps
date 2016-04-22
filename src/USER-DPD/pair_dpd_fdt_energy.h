@@ -43,7 +43,7 @@ class PairDPDfdtEnergy : public Pair {
   double **a0;
   double **sigma,**kappa;
 
-  class RanMars *random;
+  class Random *random;
 
  protected:
   double cut_global;

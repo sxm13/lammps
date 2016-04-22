@@ -20,7 +20,7 @@
 #include "neighbor.h"
 #include "neigh_list.h"
 #include "update.h"
-#include "random_mars.h"
+#include "random.h"
 
 #include "suffix.h"
 using namespace LAMMPS_NS;
@@ -72,7 +72,7 @@ void PairDPDTstatOMP::compute(int eflag, int vflag)
     }
 
     nthreads = comm->nthreads;
-    random_thr = new RanMars*[nthreads];
+    random_thr = new Random*[nthreads];
     for (int i=1; i < nthreads; ++i)
         random_thr[i] = NULL;
 
@@ -94,7 +94,7 @@ void PairDPDTstatOMP::compute(int eflag, int vflag)
     // generate a random number generator instance for
     // all threads != 0. make sure we use unique seeds.
     if ((tid > 0) && (random_thr[tid] == NULL))
-      random_thr[tid] = new RanMars(Pair::lmp, seed + comm->me
+      random_thr[tid] = new Random(Pair::lmp, seed + comm->me
                                     + comm->nprocs*tid);
 
     if (evflag) {
@@ -132,7 +132,7 @@ void PairDPDTstatOMP::eval(int iifrom, int iito, ThrData * const thr)
   const double *special_lj = force->special_lj;
   const double dtinvsqrt = 1.0/sqrt(update->dt);
   double fxtmp,fytmp,fztmp;
-  RanMars &rng = *random_thr[thr->get_tid()];
+  Random &rng = *random_thr[thr->get_tid()];
 
   // adjust sigma if target T is changing
 
@@ -220,8 +220,8 @@ double PairDPDTstatOMP::memory_usage()
 {
   double bytes = memory_usage_thr();
   bytes += PairDPDTstat::memory_usage();
-  bytes += comm->nthreads * sizeof(RanMars*);
-  bytes += comm->nthreads * sizeof(RanMars);
+  bytes += comm->nthreads * sizeof(Random*);
+  bytes += comm->nthreads * sizeof(Random);
 
   return bytes;
 }

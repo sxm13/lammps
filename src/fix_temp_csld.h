@@ -48,7 +48,7 @@ class FixTempCSLD : public Fix {
   class Compute *temperature;
   int tflag;
 
-  class RanMars *random;
+  class Random *random;
 };
 
 }

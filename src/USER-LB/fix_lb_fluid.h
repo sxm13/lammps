@@ -118,7 +118,7 @@ public:
                                                      //   0 otherwise.
     double namp,noisefactor;
     int seed;
-    class RanMars *random;
+    class Random *random;
 
     int force_diagnostic;                            // 1 to print out the force action on a group
                                                      //   of particles, 0 otherwise.

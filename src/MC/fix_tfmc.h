@@ -41,7 +41,7 @@ class FixTFMC : public Fix {
   int seed;
   int comflag, rotflag, xflag, yflag, zflag;
   int nmax;
-  class RanMars *random_num;
+  class Random *random_num;
 };
 
 }

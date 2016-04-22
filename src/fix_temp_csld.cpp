@@ -29,7 +29,7 @@
 #include "update.h"
 #include "modify.h"
 #include "compute.h"
-#include "random_mars.h"
+#include "random.h"
 #include "error.h"
 
 using namespace LAMMPS_NS;
@@ -74,7 +74,7 @@ FixTempCSLD::FixTempCSLD(LAMMPS *lmp, int narg, char **arg) :
   if (t_period <= 0.0) error->all(FLERR,"Illegal fix temp/csld command");
   if (seed <= 0) error->all(FLERR,"Illegal fix temp/csld  command");
 
-  random = new RanMars(lmp,seed + comm->me);
+  random = new Random(lmp,seed + comm->me);
 
   // create a new compute temp style
   // id = fix-ID + temp, compute group = fix group

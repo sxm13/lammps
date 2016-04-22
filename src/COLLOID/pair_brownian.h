@@ -52,7 +52,7 @@ class PairBrownian : public Pair {
   double **cut_inner,**cut;
   double R0,RT0;
 
-  class RanMars *random;
+  class Random *random;
 
   void set_3_orthogonal_vectors(double*,double*,double*);
   void allocate();

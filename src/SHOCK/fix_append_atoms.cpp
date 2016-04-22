@@ -22,7 +22,7 @@
 #include "domain.h"
 #include "lattice.h"
 #include "update.h"
-#include "random_mars.h"
+#include "random.h"
 #include "error.h"
 #include "force.h"
 
@@ -153,7 +153,7 @@ FixAppendAtoms::FixAppendAtoms(LAMMPS *lmp, int narg, char **arg) :
       ranz = force->numeric(FLERR,arg[iarg+3]);
       xseed = force->inumeric(FLERR,arg[iarg+4]);
       if (xseed <= 0) error->all(FLERR,"Illegal fix append/atoms command");
-      randomx = new RanMars(lmp,xseed + comm->me);
+      randomx = new Random(lmp,xseed + comm->me);
       iarg += 5;
     } else if (strcmp(arg[iarg],"temp") == 0) {
       if (iarg+5 > narg) error->all(FLERR,"Illegal fix append/atoms command");
@@ -166,7 +166,7 @@ FixAppendAtoms::FixAppendAtoms(LAMMPS *lmp, int narg, char **arg) :
       if (t_period <= 0) error->all(FLERR,"Illegal fix append/atoms command");
       if (t_extent <= 0) error->all(FLERR,"Illegal fix append/atoms command");
       if (tseed <= 0) error->all(FLERR,"Illegal fix append/atoms command");
-      randomt = new RanMars(lmp,tseed + comm->me);
+      randomt = new Random(lmp,tseed + comm->me);
       gfactor1 = new double[atom->ntypes+1];
       gfactor2 = new double[atom->ntypes+1];
       iarg += 5;
