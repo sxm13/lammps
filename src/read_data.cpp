@@ -968,7 +968,13 @@ void ReadData::header(int firstpass)
     } else if (strstr(line,"atom types")) {
       sscanf(line,"%d",&ntypes);
       if (addflag == NONE) atom->ntypes = ntypes + extra_atom_types;
-    } else if (strstr(line,"bond types")) {
+    } else if (strstr(line,"mol_H types")){
+
+        // Number of molecule types in Coarse-grain regions,  USER-HADRESS Package
+
+        sscanf(line,"%d",&atom->nmoltypesH);
+    }
+    else if (strstr(line,"bond types")) {
       sscanf(line,"%d",&nbondtypes);
       if (addflag == NONE) atom->nbondtypes = nbondtypes + extra_bond_types;
     } else if (strstr(line,"angle types")) {
@@ -1701,6 +1707,8 @@ void ReadData::pairIJcoeffs()
 
 void ReadData::bondcoeffs()
 {
+  if (!nbondtypes) return;
+
   char *next;
   char *buf = new char[nbondtypes*MAXLINE];
 
@@ -1723,6 +1731,8 @@ void ReadData::bondcoeffs()
 
 void ReadData::anglecoeffs(int which)
 {
+  if (!nangletypes) return;
+
   char *next;
   char *buf = new char[nangletypes*MAXLINE];
 
@@ -1747,6 +1757,8 @@ void ReadData::anglecoeffs(int which)
 
 void ReadData::dihedralcoeffs(int which)
 {
+  if (!ndihedraltypes) return;
+
   char *next;
   char *buf = new char[ndihedraltypes*MAXLINE];
 
@@ -1774,6 +1786,8 @@ void ReadData::dihedralcoeffs(int which)
 
 void ReadData::impropercoeffs(int which)
 {
+  if (!nimpropertypes) return;
+
   char *next;
   char *buf = new char[nimpropertypes*MAXLINE];
 
