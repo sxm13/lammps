@@ -44,7 +44,7 @@ RegUnion::RegUnion(LAMMPS *lmp, int narg, char **arg) : Region(lmp, narg, arg)
     idsub[nregion] = new char[m];
     strcpy(idsub[nregion],arg[iarg+3]);
     iregion = domain->find_region(idsub[nregion]);
-    if (iregion == -1) 
+    if (iregion == -1)
       error->all(FLERR,"Region union region ID does not exist");
     list[nregion++] = iregion;
   }
@@ -85,11 +85,8 @@ RegUnion::RegUnion(LAMMPS *lmp, int narg, char **arg) : Region(lmp, narg, arg)
   // for near contacts and touching contacts
 
   cmax = 0;
-  size_restart = 0;
-  for (int ilist = 0; ilist < nregion; ilist++){
+  for (int ilist = 0; ilist < nregion; ilist++)
     cmax += regions[list[ilist]]->cmax;
-    size_restart += regions[list[ilist]]->size_restart;
-  }
   contact = new Contact[cmax];
 
   tmax = 0;
@@ -121,7 +118,7 @@ void RegUnion::init()
   int iregion;
   for (int ilist = 0; ilist < nregion; ilist++) {
     iregion = domain->find_region(idsub[ilist]);
-    if (iregion == -1) 
+    if (iregion == -1)
       error->all(FLERR,"Region union region ID does not exist");
     list[ilist] = iregion;
   }
@@ -174,7 +171,7 @@ int RegUnion::surface_interior(double *x, double cutoff)
       for (jlist = 0; jlist < nregion; jlist++) {
         if (jlist == ilist) continue;
         jregion = list[jlist];
-        if (regions[jregion]->match(xs,ys,zs) && 
+        if (regions[jregion]->match(xs,ys,zs) &&
             !regions[jregion]->openflag) break;
       }
       if (jlist == nregion) {
@@ -279,6 +276,20 @@ void RegUnion::set_velocity()
   for (int ilist = 0; ilist < nregion; ilist++)
     regions[list[ilist]]->set_velocity();
 }
+
+/* ----------------------------------------------------------------------
+   increment length of restart buffer based on region info
+   used by restart of fix/wall/gran/region
+------------------------------------------------------------------------- */
+
+void RegUnion::length_restart_string(int& n)
+{
+  n += sizeof(int) + strlen(id)+1 +
+    sizeof(int) + strlen(style)+1 + sizeof(int);
+  for (int ilist = 0; ilist < nregion; ilist++)
+    domain->regions[list[ilist]]->length_restart_string(n);
+
+}
 /* ----------------------------------------------------------------------
    region writes its current position/angle
    needed by fix/wall/gran/region to compute velocity by differencing scheme
@@ -286,6 +297,13 @@ void RegUnion::set_velocity()
 
 void RegUnion::write_restart(FILE *fp)
 {
+  int sizeid = (strlen(id)+1);
+  int sizestyle = (strlen(style)+1);
+  fwrite(&sizeid, sizeof(int), 1, fp);
+  fwrite(id, 1, sizeid, fp);
+  fwrite(&sizestyle, sizeof(int), 1, fp);
+  fwrite(style, 1, sizestyle, fp);
+  fwrite(&nregion,sizeof(int),1,fp);
   for (int ilist = 0; ilist < nregion; ilist++)
     domain->regions[list[ilist]]->write_restart(fp);
 }
@@ -295,11 +313,26 @@ void RegUnion::write_restart(FILE *fp)
    needed by fix/wall/gran/region to compute velocity by differencing scheme
 ------------------------------------------------------------------------- */
 
-int RegUnion::restart(char *buf, int n)
+int RegUnion::restart(char *buf, int &n)
 {
+  int size = *((int *) (&buf[n]));
+  n += sizeof(int);
+  if ((size <= 0) || (strcmp(&buf[n],id) != 0)) return 0;
+  n += size;
+
+  size = *((int *) (&buf[n]));
+  n += sizeof(int);
+  if ((size <= 0) || (strcmp(&buf[n],style) != 0)) return 0;
+  n += size;
+
+  int restart_nreg = *((int *) (&buf[n]));
+  n += sizeof(int);
+  if (restart_nreg != nregion) return 0;
+
   for (int ilist = 0; ilist < nregion; ilist++)
-    n = domain->regions[list[ilist]]->restart(buf, n);
-  return n;
+    if (!domain->regions[list[ilist]]->restart(buf,n)) return 0;
+
+  return 1;
 }
 
 /* ----------------------------------------------------------------------
