@@ -70,23 +70,25 @@ class TypeDetector {
   }
 
   bool init(const char* input) {
-    bool status = true;
     std::vector<char*> args;
     int len = strlen(input) + 1;
     char* s = new char[len];
     strcpy(s, input);
     int ntype = tokenize(s, args);
+    if (ntype < 0) return false;
 
     int *t = new int[length];
     int val = 0;
     val = atoi(args[0]);
-    for (int num = 0; num < ntype; num++) {
+    for (int num = 0; num < ntype; ++num) {
+      const int j = num*(length+1);
+      if (!isdigit(args[j][0])) return false;
+      val=atoi(args[j]);
       for (int i = 1; i <= length; i++) {
-        if (strcmp(args[i], "*") == 0)  t[i] = 0;
-        else if (isdigit(args[i][0])) t[i] = atoi(args[i]);
+        if (strcmp(args[j+i], "*") == 0)  t[i-1] = 0;
+        else if (isdigit(args[j+i][0])) t[i-1] = atoi(args[j+i]);
         else return false;   // syntax error in type pattern
       }
-      if (!status) break;
       this->set(t, val);
     }
     delete[] t;
@@ -160,18 +162,23 @@ class TypeDetector {
     char *next = dup;
     int num = 0;
     do {
+      if (dup) ++num;
       next = strchr(next,';');
       if (next != NULL) {
         next[0] = '\0';
         ++next;
       }
       char *token = strtok(dup, " \t\r\n");
+      int len = 0;
       while (token != NULL) {
+        ++len;
         v.push_back(token);
         token = strtok(NULL, " \t\r\n");
       }
+      if (len != length+1) return -1;
       dup = next;
     } while (next != NULL);
+    if (num < 1) return -1;
     return num;
   }
 
