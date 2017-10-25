@@ -170,6 +170,10 @@ pairclass(NULL), pairnames(NULL), pairmasks(NULL)
   nex_mol = maxex_mol = 0;
   ex_mol_group = ex_mol_bit = ex_mol_intra = NULL;
 
+  nex_custom = maxex_custom = 0;
+  ex_custom_group = ex_custom_bit = ex_custom_same;
+  ex_custom_label = NULL;
+
   // Kokkos setting
 
   copymode = 0;
@@ -235,6 +239,12 @@ Neighbor::~Neighbor()
   memory->destroy(ex_mol_group);
   delete [] ex_mol_bit;
   memory->destroy(ex_mol_intra);
+
+  for (int i=0; i < nex_custom; ++i)
+    memory->sfree(ex_custom_label[i]);
+  memory->destroy(ex_custom_group);
+  delete [] ex_custom_bit;
+  memory->destroy(ex_custom_same);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -416,7 +426,8 @@ void Neighbor::init()
 
   n = atom->ntypes;
 
-  if (nex_type == 0 && nex_group == 0 && nex_mol == 0) exclude = 0;
+  if (nex_type == 0 && nex_group == 0 && nex_mol == 0 && nex_custom == 0)
+    exclude = 0;
   else exclude = 1;
 
   if (nex_type) {
@@ -466,6 +477,18 @@ void Neighbor::init()
 
     for (i = 0; i < nex_mol; i++)
       ex_mol_bit[i] = group->bitmask[ex_mol_group[i]];
+  }
+
+  if (nex_custom) {
+    if (lmp->kokkos)
+      error->all(FLERR,"Custom exclusions not (yet) supported by KOKKOS");
+    else {
+      delete [] ex_custom_bit;
+      ex_custom_bit = new int[nex_mol];
+    }
+
+    for (i = 0; i < nex_custom; i++)
+      ex_custom_bit[i] = group->bitmask[ex_custom_group[i]];
   }
 
   if (exclude && force->kspace && me == 0)
@@ -2273,7 +2296,7 @@ void Neighbor::modify_params(int narg, char **arg)
       if (includegroup < 0)
         error->all(FLERR,"Invalid group ID in neigh_modify command");
       if (includegroup && (atom->firstgroupname == NULL ||
-                            strcmp(arg[iarg+1],atom->firstgroupname) != 0))
+                           strcmp(arg[iarg+1],atom->firstgroupname) != 0))
         error->all(FLERR,
                    "Neigh_modify include group != atom_modify first group");
       iarg += 2;
@@ -2308,7 +2331,7 @@ void Neighbor::modify_params(int narg, char **arg)
         iarg += 4;
 
       } else if (strcmp(arg[iarg+1],"molecule/inter") == 0 ||
-		 strcmp(arg[iarg+1],"molecule/intra") == 0) {
+                 strcmp(arg[iarg+1],"molecule/intra") == 0) {
         if (iarg+3 > narg) error->all(FLERR,"Illegal neigh_modify command");
         if (atom->molecule_flag == 0)
           error->all(FLERR,"Neigh_modify exclude molecule "
@@ -2324,15 +2347,43 @@ void Neighbor::modify_params(int narg, char **arg)
         ex_mol_group[nex_mol] = group->find(arg[iarg+2]);
         if (ex_mol_group[nex_mol] == -1)
           error->all(FLERR,"Invalid group ID in neigh_modify command");
-	if (strcmp(arg[iarg+1],"molecule/intra") == 0)
-	  ex_mol_intra[nex_mol] = 1;
-	else
-	  ex_mol_intra[nex_mol] = 0;
+        if (strcmp(arg[iarg+1],"molecule/intra") == 0)
+          ex_mol_intra[nex_mol] = 1;
+        else
+          ex_mol_intra[nex_mol] = 0;
         nex_mol++;
         iarg += 3;
-	
+
+      } else if (strcmp(arg[iarg+1],"custom/same") == 0 ||
+                 strcmp(arg[iarg+1],"custom/differ") == 0) {
+        if (iarg+4 > narg) error->all(FLERR,"Illegal neigh_modify command");
+        if ((strstr(arg[iarg+2],"i_") == arg[iarg+2])
+            || (strstr(arg[iarg+2],"v_") == arg[iarg+2])) {
+          if (nex_custom == maxex_custom) {
+            maxex_custom += EXDELTA;
+            memory->grow(ex_custom_label,maxex_custom,"neigh:ex_custom_label");
+            for (int i = maxex_custom; i < maxex_custom+EXDELTA; ++i)
+              ex_custom_label[i] = NULL;
+            memory->grow(ex_custom_group,maxex_custom,"neigh:ex_custom_group");
+            memory->grow(ex_custom_same,maxex_custom,"neigh:ex_custom_same");
+          }
+        } else error->all(FLERR,"Illegal neigh_modify command");
+
+        ex_custom_label[nex_custom] = strdup(arg[iarg+2]);
+        ex_custom_group[nex_custom] = group->find(arg[iarg+3]);
+        if (ex_mol_group[nex_mol] == -1)
+          error->all(FLERR,"Invalid group ID in neigh_modify command");
+        if (strcmp(arg[iarg+1],"custom/same") == 0)
+          ex_custom_same[nex_custom] = 1;
+        else
+          ex_custom_same[nex_custom] = 0;
+        nex_custom++;
+        iarg += 4;
+
       } else if (strcmp(arg[iarg+1],"none") == 0) {
-        nex_type = nex_group = nex_mol = 0;
+        for (int i = 0; i < nex_custom; ++i)
+          memory->sfree(ex_custom_label[i]);
+        nex_type = nex_group = nex_mol = nex_custom = 0;
         iarg += 2;
 
       } else error->all(FLERR,"Illegal neigh_modify command");
