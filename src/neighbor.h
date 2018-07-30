@@ -74,6 +74,13 @@ class Neighbor : protected Pointers {
   int *ex_mol_intra;               // 0 = exclude if in 2 molecules (inter)
                                    // 1 = exclude if in same molecule (intra)
 
+  int nex_custom;                  // # of entries in custom exclusion list
+  int *ex_custom_bit;              // custom group bits to exclude
+  int *ex_custom_group;            // custome group #'s to exclude
+  int *ex_custom_intra;            // 0 = exclude if IJ custom differ (inter)
+                                   // 1 = exclude if IJ custom are same (intra)
+  int *ex_custom_index;            // indices into atom->ivector
+
   // special info, used by NeighPair
 
   int special_flag[4];             // flags for 1-2, 1-3, 1-4 neighbors
@@ -164,6 +171,7 @@ class Neighbor : protected Pointers {
   int maxex_type;                  // max # in exclusion type list
   int maxex_group;                 // max # in exclusion group list
   int maxex_mol;                   // max # in exclusion molecule list
+  int maxex_custom;                // max # in exclusion custom list
 
   int maxatom;                     // max size of atom-based NeighList arrays
   int maxrequest;                  // max size of NeighRequest list

@@ -169,6 +169,9 @@ pairclass(NULL), pairnames(NULL), pairmasks(NULL)
   nex_mol = maxex_mol = 0;
   ex_mol_group = ex_mol_bit = ex_mol_intra = NULL;
 
+  nex_custom = maxex_custom = 0;
+  ex_custom_group = ex_custom_bit = ex_custom_intra = ex_custom_index = NULL;
+
   // Kokkos setting
 
   copymode = 0;
@@ -234,6 +237,11 @@ Neighbor::~Neighbor()
   memory->destroy(ex_mol_group);
   delete [] ex_mol_bit;
   memory->destroy(ex_mol_intra);
+
+  memory->destroy(ex_custom_group);
+  delete [] ex_custom_bit;
+  memory->destroy(ex_custom_intra);
+  memory->destroy(ex_custom_index);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -415,7 +423,8 @@ void Neighbor::init()
 
   n = atom->ntypes;
 
-  if (nex_type == 0 && nex_group == 0 && nex_mol == 0) exclude = 0;
+  if (nex_type == 0 && nex_group == 0 && nex_mol == 0 && nex_custom) 
+    exclude = 0;
   else exclude = 1;
 
   if (nex_type) {
@@ -465,6 +474,19 @@ void Neighbor::init()
 
     for (i = 0; i < nex_mol; i++)
       ex_mol_bit[i] = group->bitmask[ex_mol_group[i]];
+  }
+
+  if (nex_custom) {
+    if (lmp->kokkos) {
+      //init_ex_custom_bit_kokkos();
+      // NOTE: will this be supported in Kokkos?
+    } else {
+      delete [] ex_custom_bit;
+      ex_custom_bit = new int[nex_custom];
+    }
+
+    for (i = 0; i < nex_custom; i++)
+      ex_custom_bit[i] = group->bitmask[ex_custom_group[i]];
   }
 
   if (exclude && force->kspace && me == 0)
@@ -2315,15 +2337,55 @@ void Neighbor::modify_params(int narg, char **arg)
           else
             memory->grow(ex_mol_intra,maxex_mol,"neigh:ex_mol_intra");
         }
+
+        if (strcmp(arg[iarg+1],"molecule/intra") == 0)
+          ex_mol_intra[nex_mol] = 1;
+        else if (strcmp(arg[iarg+1],"molecule/inter") == 0)
+          ex_mol_intra[nex_mol] = 0;
+        else error->all(FLERR,"Illegal neigh_modify command");
+
         ex_mol_group[nex_mol] = group->find(arg[iarg+2]);
         if (ex_mol_group[nex_mol] == -1)
           error->all(FLERR,"Invalid group ID in neigh_modify command");
-        if (strcmp(arg[iarg+1],"molecule/intra") == 0)
-          ex_mol_intra[nex_mol] = 1;
-        else
-          ex_mol_intra[nex_mol] = 0;
+
         nex_mol++;
         iarg += 3;
+
+      } else if (strcmp(arg[iarg+1],"custom/inter") == 0 ||
+                 strcmp(arg[iarg+1],"custom/intra") == 0) {
+        if (iarg+4 > narg) error->all(FLERR,"Illegal neigh_modify command");
+        if (nex_custom == maxex_custom) {
+          maxex_custom += EXDELTA;
+          memory->grow(ex_custom_group,maxex_custom,"neigh:ex_custom_group");
+          memory->grow(ex_custom_index,maxex_custom,"neigh:ex_custom_index");
+          if (lmp->kokkos) {
+            //grow_ex_custom_intra_kokkos();
+            // NOTE: Kokkos support?
+          } else
+            memory->grow(ex_custom_intra,maxex_custom,"neigh:ex_custom_intra");
+        }
+
+        if (strcmp(arg[iarg+1],"custom/intra") == 0)
+          ex_custom_intra[nex_custom] = 1;
+        else if (strcmp(arg[iarg+1],"custom/inter") == 0)
+          ex_custom_intra[nex_custom] = 0;
+        else error->all(FLERR,"Illegal neigh_modify command");
+
+	if (strncmp(arg[iarg+2],"i_",2) != 0)
+          error->all(FLERR,"Invalid integer custom vector "
+                     "in neigh_modify command");
+	int flag;
+        ex_custom_index[nex_custom] = atom->find_custom(&arg[iarg+2][2],flag);
+        if (ex_custom_group[nex_custom] == -1 || flag != 0)
+          error->all(FLERR,"Invalid integer custom vector "
+                     "in neigh_modify command");
+
+        ex_custom_group[nex_custom] = group->find(arg[iarg+3]);
+        if (ex_custom_group[nex_custom] == -1)
+          error->all(FLERR,"Invalid group ID in neigh_modify command");
+
+        nex_custom++;
+        iarg += 4;
 
       } else if (strcmp(arg[iarg+1],"none") == 0) {
         nex_type = nex_group = nex_mol = 0;
