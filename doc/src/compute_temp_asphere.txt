@@ -142,10 +142,6 @@ This compute requires that atoms store angular momentum and a
 quaternion as defined by the "atom_style ellipsoid"_atom_style.html
 command.
 
-All particles in the group must be finite-size.  They cannot be point
-particles, but they can be aspherical or spherical as defined by their
-shape attribute.
-
 [Related commands:]
 
 "compute temp"_compute_temp.html
