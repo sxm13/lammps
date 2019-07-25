@@ -1,0 +1,5 @@
+--leak-check=full
+--show-leak-kinds=all
+--track-origins=yes
+--suppressions=/usr/share/valgrind/OpenMP.supp
+--suppressions=/usr/share/valgrind/OpenMPI.supp
