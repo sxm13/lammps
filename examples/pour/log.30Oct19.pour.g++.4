@@ -1,0 +1,174 @@
+LAMMPS (30 Oct 2019)
+# Pour granular particles into chute container, then induce flow
+
+atom_style	sphere
+boundary	p p fm
+newton		off
+comm_modify	vel yes
+
+region		reg block -10 10 -10 10 -0.5 16 units box
+create_box	1 reg
+Created orthogonal box = (-10 -10 -0.5) to (10 10 16)
+  2 by 2 by 1 MPI processor grid
+
+neighbor	0.2 bin
+neigh_modify	delay 0
+
+# IMPORTANT NOTE: these values of stiffness (2000) and timestep (0.001)
+# are used in this example file to produce a quick simulation and movie.
+# More appropriate values for realistic simulations would be
+# k = 2.0e5 and dt = 0.0001, as in bench/in.chute.
+
+pair_style      gran/hooke/history 2000.0 NULL 50.0 NULL 0.5 0
+pair_coeff	* *
+
+timestep	0.001
+
+fix		1 all nve/sphere
+fix		2 all gravity 1.0 spherical 0.0 -180.0
+fix		zlower all wall/gran hooke/history 2000.0 NULL 50.0 NULL 0.5 0 		zplane 0.0 2000.0
+
+region		slab block -9.0 9.0 -9.0 9.0 10.0 15.0 units box
+fix		ins all pour 3000 1 300719 vol 0.13 50 region slab
+Particle insertion: 402 every 3162 steps, 3000 by step 22135
+
+compute		1 all erotate/sphere
+thermo_style	custom step atoms ke c_1 vol
+thermo		1000
+thermo_modify	lost ignore norm no
+compute_modify	thermo_temp dynamic/dof yes
+
+#dump		id all atom 1000 dump.pour
+
+#dump		2 all image 1000 image.*.jpg type type #		axes yes 0.8 0.02 view 80 -30
+#dump_modify	2 pad 5
+
+#dump		3 all movie 1000 movie.mpg type type #		axes yes 0.8 0.02 view 80 -30
+#dump_modify	3 pad 5
+
+run		25000
+Neighbor list info ...
+  update every 1 steps, delay 0 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 1.2
+  ghost atom cutoff = 1.2
+  binsize = 0.6, bins = 34 34 28
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair gran/hooke/history, perpetual
+      attributes: half, newton off, size, history
+      pair build: half/size/bin/newtoff
+      stencil: half/bin/3d/newtoff
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.831 | 5.831 | 5.831 Mbytes
+Step Atoms KinEng c_1 Volume 
+       0        0           -0            0         6600 
+    1000      402     753.1301            0         6600 
+    2000      402    1389.6785            0         6600 
+    3000      402     1438.803    14.347147         6600 
+    4000      804      1707.88    48.691663         6600 
+    5000      804    1566.8459    71.178417         6600 
+    6000      804    1291.9243     75.35894         6600 
+    7000     1206    1552.9043    73.333305         6600 
+    8000     1206    1488.2622     61.02104         6600 
+    9000     1206    1218.2943    62.139253         6600 
+   10000     1608    1304.7869    47.619362         6600 
+   11000     1608    1249.5801     45.76183         6600 
+   12000     1608    1146.1747    42.981084         6600 
+   13000     2010    1231.9245    45.497016         6600 
+   14000     2010     1165.944    44.892079         6600 
+   15000     2010    1028.9178    45.675945         6600 
+   16000     2412    1131.3613    45.366786         6600 
+   17000     2412    1047.6012    39.561966         6600 
+   18000     2412    867.02081    44.497419         6600 
+   19000     2814    949.09566    41.530949         6600 
+   20000     2814    933.63878    41.039604         6600 
+   21000     2814    811.26932    36.798126         6600 
+   22000     2814    545.16993    42.535243         6600 
+   23000     3000     420.1374    33.065619         6600 
+   24000     3000    331.10539    22.725896         6600 
+   25000     3000    231.09247     22.33736         6600 
+Loop time of 1.75913 on 4 procs for 25000 steps with 3000 atoms
+
+Performance: 1227882.020 tau/day, 14211.597 timesteps/s
+97.2% CPU use with 4 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0.83425    | 0.86005    | 0.88193    |   1.9 | 48.89
+Neigh   | 0.2034     | 0.20817    | 0.21376    |   0.8 | 11.83
+Comm    | 0.18683    | 0.18946    | 0.19411    |   0.7 | 10.77
+Output  | 0.00036788 | 0.0008325  | 0.0021789  |   0.0 |  0.05
+Modify  | 0.30885    | 0.31658    | 0.32666    |   1.1 | 18.00
+Other   |            | 0.184      |            |       | 10.46
+
+Nlocal:    750 ave 764 max 741 min
+Histogram: 2 0 0 0 0 1 0 0 0 1
+Nghost:    389.75 ave 400 max 373 min
+Histogram: 1 0 0 0 0 0 0 2 0 1
+Neighs:    3561 ave 3603 max 3528 min
+Histogram: 1 0 1 0 1 0 0 0 0 1
+
+Total # of neighbors = 14244
+Ave neighs/atom = 4.748
+Neighbor list builds = 1152
+Dangerous builds = 0
+
+unfix		ins
+fix		2 all gravity 1.0 chute 26.0
+run		25000
+Per MPI rank memory allocation (min/avg/max) = 10.44 | 10.44 | 10.44 Mbytes
+Step Atoms KinEng c_1 Volume 
+   25000     3000    231.09247     22.33736         6600 
+   26000     3000     74.97948     19.42932         6600 
+   27000     3000    94.257574    10.991075         6600 
+   28000     3000    158.92785    10.175894         6600 
+   29000     3000    265.29427    11.661461         6600 
+   30000     3000    451.34835    16.755312         6600 
+   31000     3000    699.77781     22.20726         6600 
+   32000     3000    1004.7879    31.703041         6600 
+   33000     3000    1399.2443    34.264128         6600 
+   34000     3000    1795.4553     41.32859         6600 
+   35000     3000    2335.0315    53.275445         6600 
+   36000     3000    2969.0429    58.796439         6600 
+   37000     3000      3573.83     63.60547         6600 
+   38000     3000    4309.6666    83.244731         6600 
+   39000     3000    5062.2073    87.181026         6600 
+   40000     3000    5815.5332     100.5947         6600 
+   41000     3000    6706.1953    108.18687         6600 
+   42000     3000    7631.9125    123.08205         6600 
+   43000     3000    8655.3686    135.22908         6600 
+   44000     3000    9833.5012    135.63506         6600 
+   45000     3000    10898.194    161.20412         6600 
+   46000     3000    12308.798    170.74885         6600 
+   47000     3000    13524.065     187.0354         6600 
+   48000     3000    14965.791    224.08522         6600 
+   49000     3000    16651.945    219.90195         6600 
+   50000     3000    18077.196    232.95853         6600 
+Loop time of 3.2764 on 4 procs for 25000 steps with 3000 atoms
+
+Performance: 659260.649 tau/day, 7630.332 timesteps/s
+98.2% CPU use with 4 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 1.8713     | 1.899      | 1.9169     |   1.3 | 57.96
+Neigh   | 0.32031    | 0.32549    | 0.33005    |   0.6 |  9.93
+Comm    | 0.26528    | 0.27506    | 0.28567    |   1.4 |  8.40
+Output  | 0.00047517 | 0.00094754 | 0.0023103  |   0.0 |  0.03
+Modify  | 0.46794    | 0.47439    | 0.48151    |   0.7 | 14.48
+Other   |            | 0.3015     |            |       |  9.20
+
+Nlocal:    750 ave 758 max 737 min
+Histogram: 1 0 0 0 0 0 1 0 1 1
+Nghost:    399.75 ave 405 max 395 min
+Histogram: 1 0 1 0 0 0 0 1 0 1
+Neighs:    3703.75 ave 3788 max 3624 min
+Histogram: 1 0 1 0 0 0 0 1 0 1
+
+Total # of neighbors = 14815
+Ave neighs/atom = 4.93833
+Neighbor list builds = 811
+Dangerous builds = 0
+Total wall time: 0:00:05
