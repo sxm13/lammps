@@ -555,9 +555,7 @@ PYTHON package
 ---------------------------
 
 Building with the PYTHON package requires you have a Python shared
-library available on your system, which needs to be a Python 2
-version, 2.6 or later.  Python 3 is not yet supported.  See
-lib/python/README for more details.
+library available on your system.  See lib/python/README for more details.
 
 **CMake build**\ :
 
@@ -565,13 +563,17 @@ lib/python/README for more details.
 .. parsed-literal::
 
    -D PYTHON_EXECUTABLE=path   # path to Python executable to use
+   -D PYTHON_INCLUDE_DIR=path  # path to the include folder with Python.h
+   -D PYTHON_LIBRARY=path      # path to the matching python shared library
 
-Without this setting, CMake will guess the default Python on your
+Without these settings, CMake will guess the default Python on your
 system.  To use a different Python version, you can either create a
 virtualenv, activate it and then run cmake.  Or you can set the
 PYTHON\_EXECUTABLE variable to specify which Python interpreter should
-be used.  Note note that you will also need to have the development
-headers installed for this version, e.g. python2-devel.
+be used and set PYTHON\_INCLUDE\_DIR and PYTHON\_LIBRARY to the location
+of the python development headers and the corresponding python shared
+library.  Note note that you will also need to have the development
+headers installed for this version, e.g. python3-devel.
 
 **Traditional make**\ :
 
