@@ -14,6 +14,7 @@
 #include "utils.h"
 #include <cstring>
 #include <cstdlib>
+#include <cstddef>
 #include "lammps.h"
 #include "error.h"
 
@@ -349,6 +350,25 @@ tagint utils::tnumeric(const char *file, int line, const char *str,
   return ATOTAGINT(str);
 }
 
+/* ----------------------------------------------------------------------
+   split a string into words based on whitespace and append them to
+   a provided container (which may be empty or not).
+   returns the total number of words in the container
+------------------------------------------------------------------------- */
+static const std::string whitespace(" \t\n\r\f");
+int utils::tokenize(std::vector<std::string> &words, std::string line)
+{
+  size_t current,next=-1;
+  do {
+    next = line.find_first_not_of(whitespace, next+1);
+    if (next == std::string::npos) break;
+    next -= 1;
+    current = next+1;
+    next = line.find_first_of(whitespace, current);
+    words.push_back(line.substr(current, next-current));
+  } while (next != std::string::npos);
+  return words.size();
+}
 
 /* ------------------------------------------------------------------ */
 

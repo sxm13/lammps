@@ -20,6 +20,8 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <vector>
+#include <string>
 #include "atom.h"
 #include "neighbor.h"
 #include "neigh_list.h"
@@ -28,6 +30,7 @@
 #include "comm.h"
 #include "memory.h"
 #include "error.h"
+#include "utils.h"
 
 #include "math_const.h"
 #include "math_special.h"
@@ -392,7 +395,6 @@ double PairTersoff::init_one(int i, int j)
 void PairTersoff::read_file(char *file)
 {
   int params_per_line = 17;
-  char **words = new char*[params_per_line+1];
 
   memory->sfree(params);
   params = NULL;
@@ -416,6 +418,7 @@ void PairTersoff::read_file(char *file)
   int n,nwords,ielement,jelement,kelement;
   char line[MAXLINE],*ptr;
   int eof = 0;
+  std::vector<std::string> words;
 
   while (1) {
     if (comm->me == 0) {
@@ -433,15 +436,15 @@ void PairTersoff::read_file(char *file)
     // strip comment, skip line if blank
 
     if ((ptr = strchr(line,'#'))) *ptr = '\0';
-    nwords = atom->count_words(line);
+    words.clear();
+    nwords = utils::tokenize(words,line);
     if (nwords == 0) continue;
 
     // concatenate additional lines until have params_per_line words
 
     while (nwords < params_per_line) {
-      n = strlen(line);
       if (comm->me == 0) {
-        ptr = fgets(&line[n],MAXLINE-n,fp);
+        ptr = fgets(line,MAXLINE,fp);
         if (ptr == NULL) {
           eof = 1;
           fclose(fp);
@@ -452,30 +455,26 @@ void PairTersoff::read_file(char *file)
       MPI_Bcast(&n,1,MPI_INT,0,world);
       MPI_Bcast(line,n,MPI_CHAR,0,world);
       if ((ptr = strchr(line,'#'))) *ptr = '\0';
-      nwords = atom->count_words(line);
+      nwords = utils::tokenize(words,line);
     }
 
     if (nwords != params_per_line)
       error->all(FLERR,"Incorrect format in Tersoff potential file");
 
-    // words = ptrs to all words in line
-
-    nwords = 0;
-    words[nwords++] = strtok(line," \t\n\r\f");
-    while ((words[nwords++] = strtok(NULL," \t\n\r\f"))) continue;
+    // words = vector of all strings per one set of parameters
 
     // ielement,jelement,kelement = 1st args
     // if all 3 args are in element list, then parse this line
     // else skip to next line
 
     for (ielement = 0; ielement < nelements; ielement++)
-      if (strcmp(words[0],elements[ielement]) == 0) break;
+      if (words[0] == elements[ielement]) break;
     if (ielement == nelements) continue;
     for (jelement = 0; jelement < nelements; jelement++)
-      if (strcmp(words[1],elements[jelement]) == 0) break;
+      if (words[1] == elements[jelement]) break;
     if (jelement == nelements) continue;
     for (kelement = 0; kelement < nelements; kelement++)
-      if (strcmp(words[2],elements[kelement]) == 0) break;
+      if (words[2] == elements[kelement]) break;
     if (kelement == nelements) continue;
 
     // load up parameter settings and error check their values
@@ -489,20 +488,20 @@ void PairTersoff::read_file(char *file)
     params[nparams].ielement = ielement;
     params[nparams].jelement = jelement;
     params[nparams].kelement = kelement;
-    params[nparams].powerm = atof(words[3]);
-    params[nparams].gamma = atof(words[4]);
-    params[nparams].lam3 = atof(words[5]);
-    params[nparams].c = atof(words[6]);
-    params[nparams].d = atof(words[7]);
-    params[nparams].h = atof(words[8]);
-    params[nparams].powern = atof(words[9]);
-    params[nparams].beta = atof(words[10]);
-    params[nparams].lam2 = atof(words[11]);
-    params[nparams].bigb = atof(words[12]);
-    params[nparams].bigr = atof(words[13]);
-    params[nparams].bigd = atof(words[14]);
-    params[nparams].lam1 = atof(words[15]);
-    params[nparams].biga = atof(words[16]);
+    params[nparams].powerm = atof(words[3].c_str());
+    params[nparams].gamma = atof(words[4].c_str());
+    params[nparams].lam3 = atof(words[5].c_str());
+    params[nparams].c = atof(words[6].c_str());
+    params[nparams].d = atof(words[7].c_str());
+    params[nparams].h = atof(words[8].c_str());
+    params[nparams].powern = atof(words[9].c_str());
+    params[nparams].beta = atof(words[10].c_str());
+    params[nparams].lam2 = atof(words[11].c_str());
+    params[nparams].bigb = atof(words[12].c_str());
+    params[nparams].bigr = atof(words[13].c_str());
+    params[nparams].bigd = atof(words[14].c_str());
+    params[nparams].lam1 = atof(words[15].c_str());
+    params[nparams].biga = atof(words[16].c_str());
 
     // currently only allow m exponent of 1 or 3
 
@@ -527,8 +526,6 @@ void PairTersoff::read_file(char *file)
 
     nparams++;
   }
-
-  delete [] words;
 }
 
 /* ---------------------------------------------------------------------- */

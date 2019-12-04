@@ -18,6 +18,7 @@
 
 #include "lmptype.h"
 #include <string>
+#include <vector>
 #include <cstdio>
 
 namespace LAMMPS_NS {
@@ -145,6 +146,15 @@ namespace LAMMPS_NS {
      */
     tagint tnumeric(const char *file, int line, const char *str,
                     bool do_abort, LAMMPS *lmp);
+
+
+    /** \brief Tokenize a line of text by whitespace into a vector of words
+     *
+     * \param words container to which new words should be added
+     * \param line  string that should be tokenized
+     * \return number of words in container
+     */
+    int tokenize(std::vector<std::string> &words, std::string line);
   }
 }
 
