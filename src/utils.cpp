@@ -355,16 +355,16 @@ tagint utils::tnumeric(const char *file, int line, const char *str,
    a provided container (which may be empty or not).
    returns the total number of words in the container
 ------------------------------------------------------------------------- */
-static const std::string whitespace(" \t\n\r\f");
-int utils::tokenize(std::vector<std::string> &words, std::string line)
+int utils::tokenize(std::vector<std::string> &words, std::string line,
+                    std::string delim)
 {
   size_t current,next=-1;
   do {
-    next = line.find_first_not_of(whitespace, next+1);
+    next = line.find_first_not_of(delim, next+1);
     if (next == std::string::npos) break;
     next -= 1;
     current = next+1;
-    next = line.find_first_of(whitespace, current);
+    next = line.find_first_of(delim, current);
     words.push_back(line.substr(current, next-current));
   } while (next != std::string::npos);
   return words.size();

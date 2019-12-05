@@ -152,9 +152,11 @@ namespace LAMMPS_NS {
      *
      * \param words container to which new words should be added
      * \param line  string that should be tokenized
+     * \param delim word delimiting characters (optional)
      * \return number of words in container
      */
-    int tokenize(std::vector<std::string> &words, std::string line);
+    int tokenize(std::vector<std::string> &words, std::string line,
+       std::string delim=" \t\r\n\f");
   }
 }
 
