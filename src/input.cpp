@@ -1186,7 +1186,7 @@ void Input::print()
     if (strcmp(arg[iarg],"file") == 0 || strcmp(arg[iarg],"append") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal print command");
       if (me == 0) {
-        if (fp != NULL) fclose(fp);
+        if (fp != NULL) error->one(FLERR,"May have only one file output");
         if (strcmp(arg[iarg],"file") == 0) fp = fopen(arg[iarg+1],"w");
         else fp = fopen(arg[iarg+1],"a");
         if (fp == NULL)
@@ -1210,16 +1210,15 @@ void Input::print()
   }
 
   if (me == 0) {
-    if (screenflag && screen) fprintf(screen,"%s\n",line);
-    if (screenflag && logfile) fprintf(logfile,"%s\n",line);
+    if (screenflag) utils::logmesg(lmp,fmt::format("{}\n",line));
     if (fp) {
-      fprintf(fp,"%s\n",line);
+      fmt::print(fp,"{}\n",line);
       fclose(fp);
     }
   }
   if (universeflag && (universe->me == 0)) {
-    if (universe->uscreen)  fprintf(universe->uscreen, "%s\n",line);
-    if (universe->ulogfile) fprintf(universe->ulogfile,"%s\n",line);
+    if (universe->uscreen)  fmt::print(universe->uscreen, "{}\n",line);
+    if (universe->ulogfile) fmt::print(universe->ulogfile,"{}\n",line);
   }
 }
 
