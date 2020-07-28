@@ -161,6 +161,51 @@ TEST_F(SimpleCommandsTest, Log)
     TEST_FAILURE(".*ERROR: Illegal log command.*", lmp->input->one("log"););
 }
 
+TEST_F(SimpleCommandsTest, Print)
+{
+    std::string text;
+    std::ifstream in;
+
+    ::testing::internal::CaptureStdout();
+    lmp->input->one("print test");
+    text = ::testing::internal::GetCapturedStdout();
+    ASSERT_THAT(text, "print test\ntest\n");
+
+    ::testing::internal::CaptureStdout();
+    lmp->input->one("print test screen no");
+    text = ::testing::internal::GetCapturedStdout();
+    ASSERT_THAT(text, "print test screen no\n");
+
+    ::testing::internal::CaptureStdout();
+    lmp->input->one("print test1 file simple_test_print.txt screen no");
+    text = ::testing::internal::GetCapturedStdout();
+    ASSERT_THAT(text, "print test1 file simple_test_print.txt screen no\n");
+
+    in.open("simple_test_print.txt");
+    in >> text;
+    in.close();
+    ASSERT_THAT(text, StrEq("test1"));
+
+    ::testing::internal::CaptureStdout();
+    lmp->input->one("print test2 append simple_test_print.txt");
+    text = ::testing::internal::GetCapturedStdout();
+    ASSERT_THAT(text, "print test2 append simple_test_print.txt\ntest2\n");
+    text.clear();
+
+    in.open("simple_test_print.txt");
+    in >> text;
+    ASSERT_THAT(text, StrEq("test1"));
+    in >> text;
+    ASSERT_THAT(text, StrEq("test2"));
+    in.close();
+
+    TEST_FAILURE(".*ERROR: Illegal print comma.*", lmp->input->one("print"););
+    TEST_FAILURE(".*ERROR: Illegal print comma.*", lmp->input->one("print test xxx"););
+    TEST_FAILURE(".*ERROR on proc 0: May have only one file output.*",
+                 lmp->input->one("print text file simple_test_print.txt append two"););
+    remove("simple_test_print.txt");
+}
+
 TEST_F(SimpleCommandsTest, Quit)
 {
     ::testing::internal::CaptureStdout();
