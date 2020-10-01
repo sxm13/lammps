@@ -60,8 +60,7 @@ jobs:
     - name: Building LAMMPS via CMake
       if: ${{ matrix.language == 'cpp' }}
       run: |
-       mkdir build
-       cmake -B build -C ../cmake/presets/most.cmake ../cmake -DBUILD_SHARED_LIBS=on
+       cmake -B build -C cmake/presets/most.cmake cmake -DBUILD_SHARED_LIBS=on
        make  -C build -j2
 
     - name: Perform CodeQL Analysis
