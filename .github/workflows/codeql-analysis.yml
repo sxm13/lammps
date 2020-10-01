@@ -15,6 +15,7 @@ on:
 jobs:
   analyze:
     name: Analyze
+    if: ${{ github.repository == 'akohlmey/lammps' }}
     runs-on: ubuntu-latest
 
     strategy:
@@ -28,7 +29,6 @@ jobs:
 
     steps:
     - name: Checkout repository
-      if: ${{ github.repository == 'akohlmey/lammps' }}
       uses: actions/checkout@v2
       with:
         # We must fetch at least the immediate parents so that if this is
@@ -38,11 +38,10 @@ jobs:
     # If this run was triggered by a pull request event, then checkout
     # the head of the pull request instead of the merge commit.
     - run: git checkout HEAD^2
-      if: ${{ github.repository == 'akohlmey/lammps' && github.event_name == 'pull_request' }}
+      if: ${{ github.event_name == 'pull_request' }}
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      if: ${{ github.repository == 'akohlmey/lammps' }}
       uses: github/codeql-action/init@v1
       with:
         languages: ${{ matrix.language }}
@@ -59,13 +58,11 @@ jobs:
     #    uses a compiled language
 
     - name: Building LAMMPS via CMake
-      if: ${{ github.repository == 'akohlmey/lammps' }}
+      if: ${{ matrix.language == 'cpp' }}
       run: |
        mkdir build
-       cd build
-       cmake -C ../cmake/presets/most.cmake ../cmake -DBUILD_SHARED_LIBS=on
-       make
+       cmake -B build -C ../cmake/presets/most.cmake ../cmake -DBUILD_SHARED_LIBS=on
+       make  -C build -j2
 
     - name: Perform CodeQL Analysis
-      if: ${{ github.repository == 'akohlmey/lammps' }}
       uses: github/codeql-action/analyze@v1
