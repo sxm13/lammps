@@ -3,7 +3,9 @@
 #
 # You may wish to alter this file to override the set of languages analyzed,
 # or to provide custom queries or build logic.
-name: "CodeQL"
+name: "CodeQL Code Analysis"
+
+if: github.repository == 'lammps/lammps'
 
 on:
   push:
@@ -62,7 +64,7 @@ jobs:
       run: |
        mkdir build
        cd build
-       cmake -C ../cmake/presets/minimal.cmake ../cmake -DBUILD_SHARED_LIBS=on
+       cmake -C ../cmake/presets/most.cmake ../cmake -DBUILD_SHARED_LIBS=on
        make
 
     - name: Perform CodeQL Analysis
