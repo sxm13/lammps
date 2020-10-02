@@ -48,6 +48,10 @@ HAS_PDFLATEX = YES
 endif
 endif
 
+ifeq ($(shell test -w $(HOME)/.cache/pip; echo $$?),0)
+PIP_CACHE = --no-cache-dir
+endif
+
 
 #SPHINXEXTRA = -j $(shell $(PYTHON) -c 'import multiprocessing;print(multiprocessing.cpu_count())') $(shell test -f $(BUILDDIR)/doxygen/xml/run.stamp && printf -- "-E")
 
@@ -229,8 +233,8 @@ $(VENV):
 	@( \
 		$(VIRTUALENV) -p $(PYTHON) $(VENV); \
 		. $(VENV)/bin/activate; \
-		pip install --upgrade pip; \
-		pip install --use-feature=2020-resolver -r $(BUILDDIR)/utils/requirements.txt; \
+		$(PYTHON) -m pip $(PIP_CACHE) install --upgrade pip; \
+		$(PYTHON) -m pip $(PIP_CACHE) install --use-feature=2020-resolver -r $(BUILDDIR)/utils/requirements.txt; \
 		deactivate;\
 	)
 
