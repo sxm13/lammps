@@ -18,8 +18,5 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - name: Generate ${{ matrix.target }}
-        id: documentation
         run: |
-          make -C doc ${{ matrix.target }} 2> warn.txt
-          echo "::warning name=target::$(cat warn.txt)\n"
-          test -s warn.txt && exit 1
+          make -C doc ${{ matrix.target }}
