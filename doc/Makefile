@@ -119,7 +119,7 @@ html: xmlgen $(SPHINXCONFIG)/conf.py $(ANCHORCHECK) $(MATHJAX) $(POLYFILL)
 	@rm -rf html/PDF/.[sg]*
 	@echo "Build finished. The HTML pages are in doc/html."
 
-spelling: xmlgen $(VENV) $(SPHINXCONFIG)/false_positives.txt
+spelling: xmlgen $(SPHINXCONFIG)/conf.py $(VENV) $(SPHINXCONFIG)/false_positives.txt
 	@if [ "$(HAS_BASH)" == "NO" ] ; then echo "bash was not found at $(OSHELL)! Please use: $(MAKE) SHELL=/path/to/bash" 1>&2; exit 1; fi
 	@(\
 		. $(VENV)/bin/activate ; env PYTHONWARNINGS= \
