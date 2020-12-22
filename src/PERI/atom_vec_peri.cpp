@@ -48,6 +48,7 @@ AtomVecPeri::AtomVecPeri(LAMMPS *lmp) : AtomVec(lmp)
   atom->rmass_flag = 1;
   atom->peri_flag = 1;
   atom->vfrac_flag = 1;
+  atom->x0_flag = 1;
 
   // strings with peratom variables to include in each AtomVec method
   // strings cannot contain fields in corresponding AtomVec default strings
@@ -81,6 +82,7 @@ void AtomVecPeri::grow_pointers()
   vfrac = atom->vfrac;
   s0 = atom->s0;
   x0 = atom->x0;
+  x = atom->x;
 }
 
 /* ----------------------------------------------------------------------
