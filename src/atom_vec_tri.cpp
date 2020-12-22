@@ -699,8 +699,8 @@ int AtomVecTri::pack_data_bonus(double *buf, int /*flag*/)
   double dc1[3],dc2[3],dc3[3];
   double p[3][3];
 
-  double **x = atom->x;
-  tagint *tag = atom->tag;
+  x = atom->x;
+  tag = atom->tag;
   int nlocal = atom->nlocal;
 
   int m = 0;
