@@ -17,6 +17,9 @@
 #include "atom_vec_hybrid.h"
 #include "atom_vec_line.h"
 #include "atom_vec_tri.h"
+#if defined(HAVE_PERI_PACKAGE)
+#include "atom_vec_peri.h"
+#endif
 #include "body.h"
 #include "input.h"
 #include "lammps.h"
@@ -200,6 +203,7 @@ struct AtomState {
     int mesont_flag                  = 0;
     int sp_flag                      = 0;
     int x0_flag                      = 0;
+    int s0_flag                      = 0;
     int smd_flag                     = 0;
     int damage_flag                  = 0;
     int contact_radius_flag          = 0;
@@ -361,6 +365,9 @@ void ASSERT_ATOM_STATE_EQ(Atom *atom, const AtomState &expected)
     ASSERT_ARRAY_ALLOCATED(atom->molecule, expected.molecule_flag);
     ASSERT_ARRAY_ALLOCATED(atom->molindex, expected.molindex_flag);
     ASSERT_ARRAY_ALLOCATED(atom->molatom, expected.molatom_flag);
+    ASSERT_ARRAY_ALLOCATED(atom->vfrac, expected.vfrac_flag);
+    ASSERT_ARRAY_ALLOCATED(atom->s0, expected.peri_flag);
+    ASSERT_ARRAY_ALLOCATED(atom->x0, expected.x0_flag);
 
     ASSERT_ARRAY_ALLOCATED(atom->num_bond, expected.has_bonds);
     ASSERT_ARRAY_ALLOCATED(atom->bond_type, expected.has_bonds);
@@ -392,9 +399,6 @@ void ASSERT_ATOM_STATE_EQ(Atom *atom, const AtomState &expected)
     ASSERT_ARRAY_ALLOCATED(atom->special, expected.has_special);
 
     // currently ignored
-    ASSERT_ARRAY_ALLOCATED(atom->vfrac, false);
-    ASSERT_ARRAY_ALLOCATED(atom->s0, false);
-    ASSERT_ARRAY_ALLOCATED(atom->x0, false);
     ASSERT_ARRAY_ALLOCATED(atom->sp, false);
     ASSERT_ARRAY_ALLOCATED(atom->fm, false);
     ASSERT_ARRAY_ALLOCATED(atom->fm_long, false);
@@ -4550,6 +4554,177 @@ TEST_F(AtomStyleTest, full_ellipsoid)
     EXPECT_NEAR(bonus[3].quat[2], 0.0, EPSILON);
     EXPECT_NEAR(bonus[3].quat[3], 0.25056280708573159, EPSILON);
 }
+
+#if defined(HAVE_PERI_PACKAGE)
+TEST_F(AtomStyleTest, peri)
+{
+    if (!verbose) ::testing::internal::CaptureStdout();
+    lmp->input->one("atom_style peri");
+    if (!verbose) ::testing::internal::GetCapturedStdout();
+
+    AtomState expected;
+    expected.atom_style = "peri";
+    expected.molecular  = Atom::ATOMIC;
+    expected.tag_enable = 1;
+    expected.peri_flag  = 1;
+    expected.rmass_flag = 1;
+    expected.vfrac_flag = 1;
+    expected.x0_flag    = 1;
+    expected.has_type   = true;
+    expected.has_mask   = true;
+    expected.has_image  = true;
+    expected.has_x      = true;
+    expected.has_v      = true;
+    expected.has_f      = true;
+
+    ASSERT_ATOM_STATE_EQ(lmp->atom, expected);
+
+    if (!verbose) ::testing::internal::CaptureStdout();
+    lmp->input->one("create_box 2 box");
+    lmp->input->one("create_atoms 1 single -2.0  2.0  0.1");
+    lmp->input->one("create_atoms 1 single -2.0 -2.0 -0.1");
+    lmp->input->one("create_atoms 2 single  2.0  2.0 -0.1");
+    lmp->input->one("create_atoms 2 single  2.0 -2.0  0.1");
+    lmp->input->one("set atom 1 density  0.1");
+    lmp->input->one("set atom 2 density  0.2");
+    lmp->input->one("set atom 3 density  0.05");
+    // default value 1.0 for atom 4
+    lmp->input->one("set atom 1 volume  2.0");
+    lmp->input->one("set atom 2 volume  1.0");
+    lmp->input->one("set atom 3 volume  5.0");
+    // default value 1.0 for atom 4
+    lmp->input->one("pair_coeff * *");
+    if (!verbose) ::testing::internal::GetCapturedStdout();
+    ASSERT_THAT(std::string(lmp->atom->atom_style), Eq("peri"));
+    ASSERT_NE(lmp->atom->avec, nullptr);
+    ASSERT_EQ(lmp->atom->natoms, 4);
+    ASSERT_EQ(lmp->atom->nlocal, 4);
+    ASSERT_EQ(lmp->atom->nghost, 0);
+    ASSERT_NE(lmp->atom->nmax, -1);
+    ASSERT_EQ(lmp->atom->tag_enable, 1);
+    ASSERT_EQ(lmp->atom->molecular, Atom::ATOMIC);
+    ASSERT_EQ(lmp->atom->ntypes, 2);
+
+    ASSERT_EQ(lmp->atom->mass, nullptr);
+    ASSERT_EQ(lmp->atom->mass_setflag, nullptr);
+
+    if (!verbose) ::testing::internal::CaptureStdout();
+    lmp->input->one("pair_coeff * *");
+    lmp->input->one("write_data test_atom_styles.data nocoeff");
+    lmp->input->one("clear");
+    lmp->input->one("atom_style peri");
+    lmp->input->one("pair_style zero 4.0");
+    lmp->input->one("units real");
+    lmp->input->one("atom_modify map array");
+    lmp->input->one("read_data test_atom_styles.data");
+    if (!verbose) ::testing::internal::GetCapturedStdout();
+    ASSERT_THAT(std::string(lmp->atom->atom_style), Eq("peri"));
+    ASSERT_NE(lmp->atom->avec, nullptr);
+    ASSERT_EQ(lmp->atom->natoms, 4);
+    ASSERT_EQ(lmp->atom->nlocal, 4);
+    ASSERT_EQ(lmp->atom->nghost, 0);
+    ASSERT_NE(lmp->atom->nmax, -1);
+    ASSERT_EQ(lmp->atom->tag_enable, 1);
+    ASSERT_EQ(lmp->atom->molecular, Atom::ATOMIC);
+    ASSERT_EQ(lmp->atom->ntypes, 2);
+    ASSERT_EQ(lmp->atom->peri_flag, 1);
+    ASSERT_EQ(lmp->atom->rmass_flag, 1);
+    ASSERT_NE(lmp->atom->sametag, nullptr);
+    ASSERT_EQ(lmp->atom->tag_consecutive(), 1);
+    ASSERT_EQ(lmp->atom->map_style, Atom::MAP_ARRAY);
+    ASSERT_EQ(lmp->atom->map_user, 1);
+    ASSERT_EQ(lmp->atom->map_tag_max, 4);
+
+    auto x     = lmp->atom->x;
+    auto v     = lmp->atom->v;
+    auto rmass = lmp->atom->rmass;
+    auto vfrac = lmp->atom->vfrac;
+    auto x0    = lmp->atom->x0;
+    auto s0    = lmp->atom->s0;
+    EXPECT_NEAR(x[GETIDX(1)][0], -2.0, EPSILON);
+    EXPECT_NEAR(x[GETIDX(1)][1], 2.0, EPSILON);
+    EXPECT_NEAR(x[GETIDX(1)][2], 0.1, EPSILON);
+    EXPECT_NEAR(x[GETIDX(2)][0], -2.0, EPSILON);
+    EXPECT_NEAR(x[GETIDX(2)][1], -2.0, EPSILON);
+    EXPECT_NEAR(x[GETIDX(2)][2], -0.1, EPSILON);
+    EXPECT_NEAR(x[GETIDX(3)][0], 2.0, EPSILON);
+    EXPECT_NEAR(x[GETIDX(3)][1], 2.0, EPSILON);
+    EXPECT_NEAR(x[GETIDX(3)][2], -0.1, EPSILON);
+    EXPECT_NEAR(x[GETIDX(4)][0], 2.0, EPSILON);
+    EXPECT_NEAR(x[GETIDX(4)][1], -2.0, EPSILON);
+    EXPECT_NEAR(x[GETIDX(4)][2], 0.1, EPSILON);
+    EXPECT_NEAR(v[GETIDX(1)][0], 0.0, EPSILON);
+    EXPECT_NEAR(v[GETIDX(1)][1], 0.0, EPSILON);
+    EXPECT_NEAR(v[GETIDX(1)][2], 0.0, EPSILON);
+    EXPECT_NEAR(v[GETIDX(2)][0], 0.0, EPSILON);
+    EXPECT_NEAR(v[GETIDX(2)][1], 0.0, EPSILON);
+    EXPECT_NEAR(v[GETIDX(2)][2], 0.0, EPSILON);
+    EXPECT_NEAR(v[GETIDX(3)][0], 0.0, EPSILON);
+    EXPECT_NEAR(v[GETIDX(3)][1], 0.0, EPSILON);
+    EXPECT_NEAR(v[GETIDX(3)][2], 0.0, EPSILON);
+    EXPECT_NEAR(v[GETIDX(4)][0], 0.0, EPSILON);
+    EXPECT_NEAR(v[GETIDX(4)][1], 0.0, EPSILON);
+    EXPECT_NEAR(v[GETIDX(4)][2], 0.0, EPSILON);
+    EXPECT_NEAR(rmass[GETIDX(1)], 0.1, EPSILON);
+    EXPECT_NEAR(rmass[GETIDX(2)], 0.2, EPSILON);
+    EXPECT_NEAR(rmass[GETIDX(3)], 0.05, EPSILON);
+    EXPECT_NEAR(rmass[GETIDX(4)], 1.0, EPSILON);
+    EXPECT_NEAR(vfrac[GETIDX(1)], 2.0, EPSILON);
+    EXPECT_NEAR(vfrac[GETIDX(2)], 1.0, EPSILON);
+    EXPECT_NEAR(vfrac[GETIDX(3)], 5.0, EPSILON);
+    EXPECT_NEAR(vfrac[GETIDX(4)], 1.0, EPSILON);
+    EXPECT_NEAR(x0[GETIDX(1)][0], -2.0, EPSILON);
+    EXPECT_NEAR(x0[GETIDX(1)][1], 2.0, EPSILON);
+    EXPECT_NEAR(x0[GETIDX(1)][2], 0.1, EPSILON);
+    EXPECT_NEAR(x0[GETIDX(2)][0], -2.0, EPSILON);
+    EXPECT_NEAR(x0[GETIDX(2)][1], -2.0, EPSILON);
+    EXPECT_NEAR(x0[GETIDX(2)][2], -0.1, EPSILON);
+    EXPECT_NEAR(x0[GETIDX(3)][0], 2.0, EPSILON);
+    EXPECT_NEAR(x0[GETIDX(3)][1], 2.0, EPSILON);
+    EXPECT_NEAR(x0[GETIDX(3)][2], -0.1, EPSILON);
+    EXPECT_NEAR(x0[GETIDX(4)][0], 2.0, EPSILON);
+    EXPECT_NEAR(x0[GETIDX(4)][1], -2.0, EPSILON);
+    EXPECT_NEAR(s0[GETIDX(1)], DBL_MAX, EPSILON);
+    EXPECT_NEAR(s0[GETIDX(2)], DBL_MAX, EPSILON);
+    EXPECT_NEAR(s0[GETIDX(3)], DBL_MAX, EPSILON);
+    EXPECT_NEAR(s0[GETIDX(4)], DBL_MAX, EPSILON);
+
+    if (!verbose) ::testing::internal::CaptureStdout();
+    lmp->input->one("pair_coeff * *");
+    lmp->input->one("group two id 2:4:2");
+    lmp->input->one("delete_atoms group two compress no");
+    lmp->input->one("write_restart test_atom_styles.restart");
+    lmp->input->one("clear");
+    ASSERT_THAT(std::string(lmp->atom->atom_style), Eq("atomic"));
+    lmp->input->one("read_restart test_atom_styles.restart");
+    lmp->input->one("replicate 1 1 2");
+    lmp->input->one("reset_atom_ids");
+    if (!verbose) ::testing::internal::GetCapturedStdout();
+    ASSERT_THAT(std::string(lmp->atom->atom_style), Eq("peri"));
+    ASSERT_NE(lmp->atom->avec, nullptr);
+    ASSERT_EQ(lmp->atom->natoms, 4);
+    ASSERT_EQ(lmp->atom->nlocal, 4);
+    ASSERT_EQ(lmp->atom->nghost, 0);
+    ASSERT_NE(lmp->atom->nmax, -1);
+    ASSERT_EQ(lmp->atom->tag_enable, 1);
+    ASSERT_EQ(lmp->atom->molecular, Atom::ATOMIC);
+    ASSERT_EQ(lmp->atom->ntypes, 2);
+    ASSERT_EQ(lmp->atom->tag_consecutive(), 1);
+    ASSERT_EQ(lmp->atom->map_tag_max, 4);
+
+    rmass = lmp->atom->rmass;
+    x0    = lmp->atom->x0;
+    vfrac = lmp->atom->vfrac;
+    EXPECT_NEAR(rmass[GETIDX(1)], 0.1, EPSILON);
+    EXPECT_NEAR(rmass[GETIDX(2)], 0.05, EPSILON);
+    EXPECT_NEAR(rmass[GETIDX(3)], 0.1, EPSILON);
+    EXPECT_NEAR(rmass[GETIDX(4)], 0.05, EPSILON);
+    EXPECT_NEAR(vfrac[GETIDX(1)], 2.0, EPSILON);
+    EXPECT_NEAR(vfrac[GETIDX(2)], 5.0, EPSILON);
+    EXPECT_NEAR(vfrac[GETIDX(3)], 2.0, EPSILON);
+    EXPECT_NEAR(vfrac[GETIDX(4)], 5.0, EPSILON);
+}
+#endif
 
 } // namespace LAMMPS_NS
 

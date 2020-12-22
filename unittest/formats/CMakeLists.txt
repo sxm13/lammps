@@ -1,6 +1,10 @@
 
 add_executable(test_atom_styles test_atom_styles.cpp)
 target_link_libraries(test_atom_styles PRIVATE lammps GTest::GMock GTest::GTest)
+if(PKG_PERI)
+  target_include_directories(test_atom_styles PRIVATE ${PERI_SOURCES_DIR})
+  target_compile_definitions(test_atom_styles PRIVATE -DHAVE_PERI_PACKAGE)
+endif()
 add_test(NAME AtomStyles COMMAND test_atom_styles WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 add_executable(test_image_flags test_image_flags.cpp)
