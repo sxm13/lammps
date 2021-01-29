@@ -29,10 +29,10 @@ jobs:
       working-directory: ${{github.workspace}}/build
       run: |
         cmake -C $GITHUB_WORKSPACE/cmake/presets/most.cmake $GITHUB_WORKSPACE/cmake \
-              -DENABLE_TESTING=ON -DBUILD_SHARED_LIBS=ON -DENABLE_EXCEPTIONS=ON
+              -DENABLE_TESTING=ON -DBUILD_SHARED_LIBS=ON -DLAMMPS_EXCEPTIONS=ON
         cmake --build . --parallel 2
 
     - name: Run Tests
       working-directory: ${{github.workspace}}/build
       shell: bash
-      run: ctest
+      run: ctest -V
