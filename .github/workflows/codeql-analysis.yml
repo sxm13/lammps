@@ -39,11 +39,16 @@ jobs:
       with:
         languages: ${{ matrix.language }}
 
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{github.workspace}}/build
+
     - name: Building LAMMPS via CMake
       if: ${{ matrix.language == 'cpp' }}
+      shell: bash
+      working-directory: ${{github.workspace}}/build
       run: |
-       cmake -B build -C cmake/presets/most.cmake cmake -DCMAKE_BUILD_TYPE=Debug
-       make  -C build -j2
+        cmake -C cmake/presets/most.cmake $GITHUB_WORKSPACE
+        cmake --build make  --parallel 2 $GITHUB_WORKSPACE
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
