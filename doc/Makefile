@@ -233,7 +233,7 @@ $(VENV):
 		$(VIRTUALENV) -p $(PYTHON) $(VENV); \
 		. $(VENV)/bin/activate; \
 		pip $(PIP_CACHE) install --upgrade pip; \
-		pip $(PIP_CACHE) install --use-feature=2020-resolver -r $(BUILDDIR)/utils/requirements.txt; \
+		pip $(PIP_CACHE) install -r $(BUILDDIR)/utils/requirements.txt; \
 		deactivate;\
 	)
 
