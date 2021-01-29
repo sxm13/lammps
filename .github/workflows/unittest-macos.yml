@@ -5,11 +5,10 @@ on:
   push:
     branches: [master]
   pull_request:
-    # The branches below must be a subset of the branches above
     branches: [master]
 
 jobs:
-  analyze:
+  build:
     name: MacOS Unit Test
     if: ${{ github.repository == 'akohlmey/lammps' }}
     runs-on: macos-latest
@@ -22,22 +21,18 @@ jobs:
         # a pull request then we can checkout the head.
         fetch-depth: 2
 
-    # If this run was triggered by a pull request event, then checkout
-    # the head of the pull request instead of the merge commit.
-    - run: git checkout HEAD^2
-      if: ${{ github.event_name == 'pull_request' }}
-
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/build
 
     - name: Building LAMMPS via CMake
-      working-directory: ${{github.workspace}}/build
       shell: bash
+      working-directory: ${{github.workspace}}/build
       run: |
-        cmake -C cmake/presets/most.cmake $GITHUB_WORKSPACE -DENABLE_TESTING=ON -DBUILD_SHARED_LIBS=ON -DENABLE_EXCEPTIONS=ON
-        cmake --build make  --parallel 2 $GITHUB_WORKSPACE
+        cmake -C $GITHUB_WORKSPACE/cmake/presets/most.cmake $GITHUB_WORKSPACE \
+              -DENABLE_TESTING=ON -DBUILD_SHARED_LIBS=ON -DENABLE_EXCEPTIONS=ON
+        cmake --build . --parallel 2
 
    - name: Run Tests
      working-directory: ${{github.workspace}}/build
      shell: bash
-     run: ctest -C $BUILD_TYPE
+     run: ctest
