@@ -13,7 +13,8 @@ jobs:
     name: Analyze
     if: ${{ github.repository == 'akohlmey/lammps' }}
     runs-on: ubuntu-latest
-    with python-version: '3.x'
+    with:
+      python-version: '3.x'
 #    setup-python-dependencies: false
 
     strategy:
