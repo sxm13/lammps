@@ -13,28 +13,28 @@
 
 #include "fix_rx.h"
 
+#include "atom.h"
+#include "comm.h"
+#include "domain.h"
+#include "error.h"
+#include "force.h"
+#include "group.h"
+#include "math_special.h"
+#include "memory.h"
+#include "modify.h"
+#include "neigh_list.h"
+#include "neigh_request.h"
+#include "neighbor.h"
+#include "update.h"
+#include "pair_dpd_fdt_energy.h"
+#include "tokenizer.h"
 
 #include <cstring>
 #include <cmath>
-#include <cfloat> // DBL_EPSILON
-#include "atom.h"
-#include "error.h"
-#include "group.h"
-#include "modify.h"
-#include "force.h"
-#include "memory.h"
-#include "comm.h"
-#include "update.h"
-#include "domain.h"
-#include "neighbor.h"
-#include "neigh_list.h"
-#include "neigh_request.h"
-#include "math_special.h"
-#include "pair_dpd_fdt_energy.h"
-
-
-#include <vector> // std::vector<>
-#include <algorithm> // std::max
+#include <cfloat>     // DBL_EPSILON
+#include <set>        // std::set<>
+#include <vector>     // std::vector<>
+#include <algorithm>  // std::max
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -69,11 +69,11 @@ double getElapsedTime( const TimerType &t0, const TimerType &t1) { return t1-t0;
 FixRX::FixRX(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg), mol2param(nullptr), nreactions(0),
   params(nullptr), Arr(nullptr), nArr(nullptr), Ea(nullptr), tempExp(nullptr),
-  stoich(nullptr), stoichReactants(nullptr), stoichProducts(nullptr), kR(nullptr),
-  pairDPDE(nullptr), dpdThetaLocal(nullptr), sumWeights(nullptr), sparseKinetics_nu(nullptr),
-  sparseKinetics_nuk(nullptr), sparseKinetics_inu(nullptr), sparseKinetics_isIntegralReaction(nullptr),
-  kineticsFile(nullptr), id_fix_species(nullptr),
-  id_fix_species_old(nullptr), fix_species(nullptr), fix_species_old(nullptr)
+  stoich(nullptr), stoichReactants(nullptr), stoichProducts(nullptr),
+  kR(nullptr), pairDPDE(nullptr), dpdThetaLocal(nullptr), sumWeights(nullptr),
+  sparseKinetics_nu(nullptr), sparseKinetics_nuk(nullptr),
+  sparseKinetics_inu(nullptr), sparseKinetics_isIntegralReaction(nullptr),
+  kineticsFile(nullptr), fix_species(nullptr), fix_species_old(nullptr)
 {
   if (narg < 7 || narg > 12) error->all(FLERR,"Illegal fix rx command");
   nevery = 1;
@@ -82,8 +82,6 @@ FixRX::FixRX(LAMMPS *lmp, int narg, char **arg) :
   params = nullptr;
   mol2param = nullptr;
   pairDPDE = nullptr;
-  id_fix_species = nullptr;
-  id_fix_species_old = nullptr;
 
   const int Verbosity = 1;
 
@@ -237,14 +235,12 @@ FixRX::~FixRX()
   delete [] stoichReactants;
   delete [] stoichProducts;
   delete [] kR;
-  delete [] id_fix_species;
-  delete [] id_fix_species_old;
 
   if (useSparseKinetics) {
-     memory->destroy( sparseKinetics_nu );
-     memory->destroy( sparseKinetics_nuk );
-     memory->destroy( sparseKinetics_inu );
-     memory->destroy( sparseKinetics_isIntegralReaction );
+    memory->destroy(sparseKinetics_nu);
+    memory->destroy(sparseKinetics_nuk);
+    memory->destroy(sparseKinetics_inu);
+    memory->destroy(sparseKinetics_isIntegralReaction);
   }
 }
 
@@ -252,34 +248,20 @@ FixRX::~FixRX()
 
 void FixRX::post_constructor()
 {
-  int maxspecies = 1000;
-  int nUniqueSpecies = 0;
-  bool match;
-
-  char **tmpspecies = new char*[maxspecies];
-  int tmpmaxstrlen = 0;
-  for (int jj=0; jj < maxspecies; jj++)
-    tmpspecies[jj] = nullptr;
-
   // open file on proc 0
 
-  FILE *fp;
-  fp = nullptr;
+  FILE *fp = nullptr;
+
   if (comm->me == 0) {
     fp = utils::open_potential(kineticsFile,lmp,nullptr);
-    if (fp == nullptr) {
-      char str[128];
-      snprintf(str,128,"Cannot open rx file %s",kineticsFile);
-      error->one(FLERR,str);
-    }
+    if (fp == nullptr)
+      error->one(FLERR,fmt::format("Cannot open rx file {}: {}",
+                                   kineticsFile,utils::getsyserror()));
   }
 
-  // Assign species names to tmpspecies array and determine the number of unique species
-
-  int n,nwords;
-  char line[MAXLINE],*ptr;
+  std::set<std::string> tmpspecies;
+  char line[MAXLINE], *ptr;
   int eof = 0;
-  char * word;
 
   while (1) {
     if (comm->me == 0) {
@@ -287,112 +269,57 @@ void FixRX::post_constructor()
       if (ptr == nullptr) {
         eof = 1;
         fclose(fp);
-      } else n = strlen(line) + 1;
+      }
     }
     MPI_Bcast(&eof,1,MPI_INT,0,world);
     if (eof) break;
-    MPI_Bcast(&n,1,MPI_INT,0,world);
-    MPI_Bcast(line,n,MPI_CHAR,0,world);
+    MPI_Bcast(line,MAXLINE,MPI_CHAR,0,world);
 
     // strip comment, skip line if blank
 
-    if ((ptr = strchr(line,'#'))) *ptr = '\0';
-    nwords = utils::count_words(line);
-    if (nwords == 0) continue;
+    Tokenizer words(utils::trim_comment(line));
+    if (words.count() == 0) continue;
 
-    // words = ptrs to all words in line
+    while (words.has_next()) {
+      words.next();                     // ignore (is a ratio)
+      if (words.has_next())
+        tmpspecies.insert(words.next());  // add element to set
+      else error->all(FLERR,"Invalid rx kinetics file format");
 
-    nwords = 0;
-    word = strtok(line," \t\n\r\f");
-    while (word != nullptr) {
-      word = strtok(nullptr, " \t\n\r\f");
-      match=false;
-      for (int jj=0;jj<nUniqueSpecies;jj++) {
-        if (strcmp(word,tmpspecies[jj])==0) {
-          match=true;
-          break;
-        }
+      if (words.has_next()) {
+        std::string next = words.next();
+        if ((next != "+") && (next != "=")) break;
       }
-      if (!match) {
-        if (nUniqueSpecies+1>=maxspecies)
-          error->all(FLERR,"Exceeded the maximum number of species permitted in fix rx.");
-        tmpspecies[nUniqueSpecies] = new char[strlen(word)+1];
-        strcpy(tmpspecies[nUniqueSpecies],word);
-        tmpmaxstrlen = MAX(tmpmaxstrlen,(int)strlen(word));
-        nUniqueSpecies++;
-      }
-      word = strtok(nullptr, " \t\n\r\f");
-      if (strcmp(word,"+") != 0 && strcmp(word,"=") != 0) break;
-      word = strtok(nullptr, " \t\n\r\f");
     }
   }
-  atom->nspecies_dpd = nUniqueSpecies;
-  nspecies = atom->nspecies_dpd;
+
+  nspecies = atom->nspecies_dpd = tmpspecies.size();
+  if (nspecies==0) error->all(FLERR,"There are no rx species specified.");
 
   // new id = fix-ID + FIX_STORE_ATTRIBUTE
   // new fix group = group for this fix
 
-  id_fix_species = nullptr;
-  id_fix_species_old = nullptr;
+  std::string fix1cmd,fix2cmd;
 
-  n = strlen(id) + strlen("_SPECIES") + 1;
-  id_fix_species = new char[n];
-  n = strlen(id) + strlen("_SPECIES_OLD") + 1;
-  id_fix_species_old = new char[n];
-
-  strcpy(id_fix_species,id);
-  strcat(id_fix_species,"_SPECIES");
-  strcpy(id_fix_species_old,id);
-  strcat(id_fix_species_old,"_SPECIES_OLD");
-
-  char **newarg = new char*[nspecies+5];
-  char **newarg2 = new char*[nspecies+5];
-  newarg[0] = id_fix_species;
-  newarg[1] = group->names[igroup];
-  newarg[2] = (char *) "property/atom";
-  newarg2[0] = id_fix_species_old;
-  newarg2[1] = group->names[igroup];
-  newarg2[2] = (char *) "property/atom";
-  char *str1 = new char[tmpmaxstrlen+3];
-  char *str2 = new char[tmpmaxstrlen+6];
-  for (int ii=0; ii<nspecies; ii++) {
-    strcpy(str1,"d_");
-    strcpy(str2,"d_");
-    strcat(str1,tmpspecies[ii]);
-    strcat(str2,tmpspecies[ii]);
-    strcat(str2,"Old");
-    newarg[ii+3] = new char[strlen(str1)+1];
-    newarg2[ii+3] = new char[strlen(str2)+1];
-    strcpy(newarg[ii+3],str1);
-    strcpy(newarg2[ii+3],str2);
+  fix1cmd = fmt::format("{}_SPECIES {} property/atom",
+                        id,group->names[igroup]);
+  fix2cmd = fmt::format("{}_SPECIES_OLD {} property/atom",
+                        id,group->names[igroup]);
+  for (auto species : tmpspecies) {
+    fix1cmd += fmt::format(" d_{}",species);
+    fix2cmd += fmt::format(" d_{}Old",species);
   }
-  delete[] str1;
-  delete[] str2;
-  newarg[nspecies+3] = (char *) "ghost";
-  newarg[nspecies+4] = (char *) "yes";
-  newarg2[nspecies+3] = (char *) "ghost";
-  newarg2[nspecies+4] = (char *) "yes";
+  fix1cmd += " ghost yes";
+  fix2cmd += " ghost yes";
 
-  modify->add_fix(nspecies+5,newarg,1);
+  modify->add_fix(fix1cmd);
   fix_species = (FixPropertyAtom *) modify->fix[modify->nfix-1];
   restartFlag = modify->fix[modify->nfix-1]->restart_reset;
 
-  modify->add_fix(nspecies+5,newarg2,1);
+  modify->add_fix(fix2cmd);
   fix_species_old = (FixPropertyAtom *) modify->fix[modify->nfix-1];
 
-  if (nspecies==0) error->all(FLERR,"There are no rx species specified.");
-
-  for (int jj=0;jj<nspecies;jj++) {
-    delete[] tmpspecies[jj];
-    delete[] newarg[jj+3];
-    delete[] newarg2[jj+3];
-  }
-
-  delete[] newarg;
-  delete[] newarg2;
-  delete[] tmpspecies;
-
-  read_file( kineticsFile );
+  read_file(kineticsFile);
 
   if (useSparseKinetics)
     this->initSparse();
@@ -846,7 +773,7 @@ void FixRX::pre_force(int /*vflag*/)
 
 /* ---------------------------------------------------------------------- */
 
-void FixRX::read_file(char *file)
+void FixRX::read_file(const char *file)
 {
   nreactions = 0;
 
@@ -856,16 +783,13 @@ void FixRX::read_file(char *file)
   fp = nullptr;
   if (comm->me == 0) {
     fp = utils::open_potential(file,lmp,nullptr);
-    if (fp == nullptr) {
-      char str[128];
-      snprintf(str,128,"Cannot open rx file %s",file);
-      error->one(FLERR,str);
-    }
+    if (fp == nullptr)
+      error->one(FLERR,fmt::format("Cannot open rx file {}: {}",
+                                   file,utils::getsyserror()));
   }
 
   // Count the number of reactions from kinetics file
 
-  int n,nwords,ispecies;
   char line[MAXLINE],*ptr;
   int eof = 0;
 
@@ -875,112 +799,113 @@ void FixRX::read_file(char *file)
       if (ptr == nullptr) {
         eof = 1;
         fclose(fp);
-      } else n = strlen(line) + 1;
+      }
     }
     MPI_Bcast(&eof,1,MPI_INT,0,world);
     if (eof) break;
-    MPI_Bcast(&n,1,MPI_INT,0,world);
-    MPI_Bcast(line,n,MPI_CHAR,0,world);
+    MPI_Bcast(line,MAXLINE,MPI_CHAR,0,world);
 
-    // strip comment, skip line if blank
+    // strip comment, count lines with a reaction (i.e. having a '=')
 
-    if ((ptr = strchr(line,'#'))) *ptr = '\0';
-    nwords = utils::count_words(line);
-    if (nwords == 0) continue;
-
-    nreactions++;
+    if (utils::trim_comment(line).find('=') != std::string::npos)
+      nreactions++;
   }
 
-  // open file on proc 0
+  // open file again on proc 0 for second pass
   if (comm->me == 0) fp = utils::open_potential(file,lmp,nullptr);
 
   // read each reaction from kinetics file
-  eof=0;
-  char * word;
-  double tmpStoich;
-  double sign;
 
   Arr = new double[nreactions];
   nArr = new double[nreactions];
   Ea = new double[nreactions];
+  kR = new double[nreactions];
   tempExp = new double[nreactions];
   stoich = new double*[nreactions];
   stoichReactants = new double*[nreactions];
   stoichProducts = new double*[nreactions];
-  for (int ii=0;ii<nreactions;ii++) {
+
+  for (int ii=0; ii<nreactions; ii++) {
     stoich[ii] = new double[nspecies];
     stoichReactants[ii] = new double[nspecies];
     stoichProducts[ii] = new double[nspecies];
   }
-  kR = new double[nreactions];
-  for (int ii=0;ii<nreactions;ii++) {
-    for (int jj=0;jj<nspecies;jj++) {
+
+  for (int ii=0; ii<nreactions; ii++) {
+    for (int jj=0; jj<nspecies; jj++) {
       stoich[ii][jj] = 0.0;
       stoichReactants[ii][jj] = 0.0;
       stoichProducts[ii][jj] = 0.0;
     }
   }
 
+  double tmpStoich;
+  double sign = -1.0;
+  std::string word;
   nreactions=0;
-  sign = -1.0;
+  eof=0;
+
   while (1) {
     if (comm->me == 0) {
       ptr = fgets(line,MAXLINE,fp);
       if (ptr == nullptr) {
         eof = 1;
         fclose(fp);
-      } else n = strlen(line) + 1;
+      }
     }
     MPI_Bcast(&eof,1,MPI_INT,0,world);
     if (eof) break;
-    MPI_Bcast(&n,1,MPI_INT,0,world);
-    MPI_Bcast(line,n,MPI_CHAR,0,world);
+    MPI_Bcast(line,MAXLINE,MPI_CHAR,0,world);
 
     // strip comment, skip line if blank
 
     if ((ptr = strchr(line,'#'))) *ptr = '\0';
-    nwords = utils::count_words(line);
-    if (nwords == 0) continue;
+    ValueTokenizer words(utils::trim_comment(line));
+    if (words.count() == 0) continue;
 
-    // words = ptrs to all words in line
-
-    nwords = 0;
-    word = strtok(line," \t\n\r\f");
-    while (word != nullptr) {
-      tmpStoich = atof(word);
-      word = strtok(nullptr, " \t\n\r\f");
+    while (words.has_next()) {
+      int ispecies;
+      tmpStoich = words.next_double();
+      word = words.next_string();
       for (ispecies = 0; ispecies < nspecies; ispecies++) {
-        if (strcmp(word,&atom->dname[ispecies][0]) == 0) {
+        if (word == atom->dname[ispecies]) {
           stoich[nreactions][ispecies] += sign*tmpStoich;
-          if (sign<0.0)
+          if (sign < 0.0)
             stoichReactants[nreactions][ispecies] += tmpStoich;
           else stoichProducts[nreactions][ispecies] += tmpStoich;
           break;
         }
       }
+
       if (ispecies==nspecies) {
-        if (comm->me) {
-          fprintf(stderr,"%s mol fraction is not found in data file\n",word);
-          fprintf(stderr,"nspecies=%d ispecies=%d\n",nspecies,ispecies);
+        if (comm->me == 0) {
+          error->warning(FLERR,fmt::format("Mol fraction for {} not found in "
+                                           "data file\nnspecies={} ispecies={}\n",
+                                           word,nspecies,ispecies));
         }
         error->all(FLERR,"Illegal fix rx command");
       }
-      word = strtok(nullptr, " \t\n\r\f");
-      if (word==nullptr) error->all(FLERR,"Missing parameters in reaction kinetic equation");
-      if (strcmp(word,"=") == 0) sign = 1.0;
-      if (strcmp(word,"+") != 0 && strcmp(word,"=") != 0) {
-        if (word==nullptr) error->all(FLERR,"Missing parameters in reaction kinetic equation");
-        Arr[nreactions] = atof(word);
-        word = strtok(nullptr, " \t\n\r\f");
-        if (word==nullptr) error->all(FLERR,"Missing parameters in reaction kinetic equation");
-        nArr[nreactions]  = atof(word);
-        word = strtok(nullptr, " \t\n\r\f");
-        if (word==nullptr) error->all(FLERR,"Missing parameters in reaction kinetic equation");
-        Ea[nreactions]  = atof(word);
+
+      if (!words.has_next())
+        error->all(FLERR,"Missing parameters in reaction kinetic equation");
+
+      word = words.next_string();
+
+      // completed left hand side of reaction
+      if (word == "=") sign = 1.0;
+
+      // reached end of reaction description. parse reaction kinetic parameters.
+      if ((word != "+") && (word != "=")) {
+        Arr[nreactions]  = utils::numeric(FLERR,word.c_str(),false,lmp);
+        if (!words.has_next())
+          error->all(FLERR,"Missing parameters in reaction kinetic equation");
+        nArr[nreactions] = words.next_double();
+        if (!words.has_next())
+          error->all(FLERR,"Missing parameters in reaction kinetic equation");
+        Ea[nreactions]   = words.next_double();
         sign = -1.0;
         break;
       }
-      word = strtok(nullptr, " \t\n\r\f");
     }
     nreactions++;
   }

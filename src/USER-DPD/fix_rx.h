@@ -59,7 +59,7 @@ class FixRX : public Fix {
   Param *params;                // parameter set for an I-J-K interaction
 
   int nspecies;
-  void read_file(char *);
+  void read_file(const char *);
   void setupParams();
   double *Arr, *nArr, *Ea, *tempExp;
   double **stoich, **stoichReactants, **stoichProducts;
@@ -140,7 +140,6 @@ class FixRX : public Fix {
 
  private:
   char *kineticsFile;
-  char *id_fix_species,*id_fix_species_old;
   class FixPropertyAtom *fix_species,*fix_species_old;
   int restartFlag;
 
