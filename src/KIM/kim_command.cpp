@@ -79,18 +79,23 @@ void KimCommand::command(int narg, char **arg)
   if (subcmd == "init") {
     KimInit *cmd = new KimInit(lmp);
     cmd->command(narg,arg);
+    delete cmd;
   } else if (subcmd == "interactions") {
     KimInteractions *cmd = new KimInteractions(lmp);
     cmd->command(narg,arg);
+    delete cmd;
   } else if (subcmd == "param") {
     KimParam *cmd = new KimParam(lmp);
     cmd->command(narg,arg);
+    delete cmd;
   } else if (subcmd == "property") {
     KimProperty *cmd = new KimProperty(lmp);
     cmd->command(narg,arg);
+    delete cmd;
   } else if (subcmd == "query") {
     KimQuery *cmd = new KimQuery(lmp);
     cmd->command(narg,arg);
+    delete cmd;
   } else error->all(FLERR,fmt::format("Unknown kim subcommand {}",subcmd));
 }
 
