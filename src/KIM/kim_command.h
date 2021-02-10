@@ -12,7 +12,7 @@
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
-   Contributing author: Yaser Afshar (UMN)
+   Contributing authors: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
@@ -53,26 +53,31 @@
    Designed for use with the kim-api-2.1.0 (and newer) package
 ------------------------------------------------------------------------- */
 
-#ifndef LMP_KIM_PROPERTY_H
-#define LMP_KIM_PROPERTY_H
+#ifdef COMMAND_CLASS
+
+CommandStyle(kim,KimCommand)
+
+#else
+
+#ifndef LMP_KIM_COMMAND_H
+#define LMP_KIM_COMMAND_H
 
 #include "pointers.h"
 
-namespace LAMMPS_NS
-{
+namespace LAMMPS_NS {
 
-class KimProperty : protected Pointers
-{
-public:
-  KimProperty(class LAMMPS *lmp);
-
+class KimCommand : protected Pointers {
+ public:
+  KimCommand(class LAMMPS *lmp) : Pointers(lmp) {};
   void command(int, char **);
 };
 
-} // namespace LAMMPS_NS
+}
 
-#endif // LMP_KIM_PROPERTY_H
+#endif
+#endif
 
 /* ERROR/WARNING messages:
+
 
 */

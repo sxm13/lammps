@@ -1,6 +1,6 @@
-/* -*- c++ -*- ----------------------------------------------------------
+/* ----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://lammps.sandia.gov, Sandia National Laboratories
+   https://lammps.sandia.gov/, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -12,7 +12,7 @@
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
-   Contributing author: Yaser Afshar (UMN)
+   Contributing authors: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
@@ -53,26 +53,44 @@
    Designed for use with the kim-api-2.1.0 (and newer) package
 ------------------------------------------------------------------------- */
 
-#ifndef LMP_KIM_PROPERTY_H
-#define LMP_KIM_PROPERTY_H
+#include "kim_command.h"
 
-#include "pointers.h"
+#include "error.h"
 
-namespace LAMMPS_NS
+// include KIM sub-command headers here
+#include "kim_init.h"
+#include "kim_interactions.h"
+#include "kim_param.h"
+#include "kim_property.h"
+#include "kim_query.h"
+
+using namespace LAMMPS_NS;
+
+/* ---------------------------------------------------------------------- */
+
+void KimCommand::command(int narg, char **arg)
 {
+  if (narg < 1) error->all(FLERR,"Illegal kim command");
 
-class KimProperty : protected Pointers
-{
-public:
-  KimProperty(class LAMMPS *lmp);
+  const std::string subcmd(arg[0]);
+  narg--;
+  arg++;
 
-  void command(int, char **);
-};
+  if (subcmd == "init") {
+    KimInit *cmd = new KimInit(lmp);
+    cmd->command(narg,arg);
+  } else if (subcmd == "interactions") {
+    KimInteractions *cmd = new KimInteractions(lmp);
+    cmd->command(narg,arg);
+  } else if (subcmd == "param") {
+    KimParam *cmd = new KimParam(lmp);
+    cmd->command(narg,arg);
+  } else if (subcmd == "property") {
+    KimProperty *cmd = new KimProperty(lmp);
+    cmd->command(narg,arg);
+  } else if (subcmd == "query") {
+    KimQuery *cmd = new KimQuery(lmp);
+    cmd->command(narg,arg);
+  } else error->all(FLERR,fmt::format("Unknown kim subcommand {}",subcmd));
+}
 
-} // namespace LAMMPS_NS
-
-#endif // LMP_KIM_PROPERTY_H
-
-/* ERROR/WARNING messages:
-
-*/
